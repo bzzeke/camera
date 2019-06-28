@@ -2,12 +2,10 @@ import cv2, sys
 import socket
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from pynng import Bus0, Req0
+from pynng import Bus0, Rep0
 import numpy, json
-
-
-meta_server_address="tcp://127.0.0.1:5555"
-api_server_port=9000
+import ptz
+import os
 
 class HttpServer(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -28,25 +26,22 @@ class HttpServer(BaseHTTPRequestHandler):
         self.wfile.write(response)
 
 class ApiServer(HttpServer):
+    cameras = {}
+
     def snapshot(self, args):
         self.send_response(200)
         self.send_header('Content-type', 'image/jpeg')
         self.end_headers()
 
         cam = args[0]
-        s1 = Req0(dial=meta_server_address, recv_timeout=500)
-        s1.send(b'cams')
-        cams = json.loads(s1.recv().decode("utf-8"))
-        s1.close()
-
-        if cams:
-            if cam in cams:
-                s2 = Bus0(dial=cams[cam]['stream'], recv_timeout=2000 , recv_max_size=0, send_buffer_size=1, recv_buffer_size=1)
+        if self.cameras:
+            if cam in self.cameras:
+                s2 = Bus0(dial=self.cameras[cam]['stream'], recv_timeout=2000 , recv_max_size=0, send_buffer_size=1, recv_buffer_size=1)
                 msg = s2.recv()
                 s2.close()
 
-                A = numpy.frombuffer(msg, dtype=cams[cam]["meta"]["dtype"])
-                frame = A.reshape(cams[cam]["meta"]['shape'])
+                A = numpy.frombuffer(msg, dtype=self.cameras[cam]["meta"]["dtype"])
+                frame = A.reshape(self.cameras[cam]["meta"]['shape'])
 
                 del A
                 ret, jpeg = cv2.imencode('.jpg', frame)
@@ -55,10 +50,48 @@ class ApiServer(HttpServer):
 
         return b""
 
+    def ptz(self, args):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+
+        cam = args[0]
+        direction = args[1]
+
+        if not "onvif" in self.cameras[cam]:
+            return b""
+
+        ptz.continuous_move(self.cameras[cam]["onvif"], direction)
+        return b'"OK"'
+
+def get_cams_meta():
+
+    cameras = {}
+    print("Waiting for meta information")
+    s1 = Rep0(listen=os.environ["META_SERVER_ADDRESS"], recv_timeout=1000)
+    while True:
+        try:
+            msg = s1.recv()
+            if msg:
+                cameras = json.loads(msg.decode("utf-8"))
+                print("Meta information was received successfully")
+                break
+
+        except Exception as e:
+            pass
+        time.sleep(1)
+
+    print("Closing meta information listener")
+    s1.close()
+
+    return cameras
+
 def run():
 
+    cameras = get_cams_meta()
     print("Starting API server")
-    httpd = HTTPServer(("", api_server_port), ApiServer)
+    httpd = HTTPServer(("", int(os.environ["API_SERVER_PORT"])), ApiServer)
+    httpd.RequestHandlerClass.cameras = cameras
 
     try:
         httpd.serve_forever()
