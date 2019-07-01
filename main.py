@@ -10,6 +10,9 @@ from threading import Thread
 
 def import_env():
     filepath = os.path.dirname(os.path.realpath(__file__)) + '/.env'
+    if not os.path.isfile(filepath):
+        return
+
     with open(filepath) as fp:
         for cnt, line in enumerate(fp):
             parts = line.split('=', 1)
