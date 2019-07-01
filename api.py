@@ -64,6 +64,14 @@ class ApiServer(HttpServer):
         ptz.continuous_move(self.cameras[cam]["onvif"], direction)
         return b'"OK"'
 
+    def camera_list(self, args):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+
+        return json.dumps(self.cameras).encode("utf-8")
+
+
 def get_cams_meta():
 
     cameras = {}
