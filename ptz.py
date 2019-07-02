@@ -38,7 +38,7 @@ def stop(cam):
 
 def continuous_move(camera, direction):
     cam = OnvifCam()
-    cam.setup(0, camera["host"])
+    cam.setup(camera["host"])
     cam.setAuth(camera["username"], camera["password"])
     cam.setProfileToken(get_profile_token(cam))
 

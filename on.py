@@ -31,7 +31,7 @@ class OnvifCam():
       self.profiletoken = profile
     else:
       print("You need to give address for camera")
-    return False
+      return False
 
     self.profiletoken = profile
     self.movespeed = "0.5"
@@ -85,8 +85,10 @@ class OnvifCam():
       soapmsg=self.insertInEnvelope(fullmsg)
     else:
       soapmsg=self.insertInEnvelope(self.insertInBody(bmsg))
+
     self.conn.request("POST", self.cpath, soapmsg)
     resp = self.conn.getresponse().read()
+
     return resp
 
   def onvifauthheader(self):
