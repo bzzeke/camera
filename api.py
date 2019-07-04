@@ -6,6 +6,7 @@ from pynng import Bus0, Rep0
 import numpy, json
 import ptz
 import os
+import copy
 
 class HttpServer(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -69,7 +70,18 @@ class ApiServer(HttpServer):
         self.send_header('Content-type', 'application/json')
         self.end_headers()
 
-        return json.dumps(self.cameras).encode("utf-8")
+        cameras = []
+        ip = get_ip()
+        for cam in self.cameras:
+            camera = copy.deepcopy(self.cameras[cam])
+            del camera["meta"]
+            camera["name"] = cam
+            camera["snapshot_url"] = "http://%s:%s/snapshot/%s" % (ip, os.environ["API_SERVER_PORT"], cam)
+            camera["ptz_url"] = "http://%s:%s/ptz/%s" % (ip, os.environ["API_SERVER_PORT"], cam)
+
+            cameras.append(camera)
+
+        return json.dumps(cameras).encode("utf-8")
 
 
 def get_cams_meta():
@@ -93,6 +105,12 @@ def get_cams_meta():
     s1.close()
 
     return cameras
+
+def get_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    s.connect(('<broadcast>', 0))
+    return s.getsockname()[0]
 
 def run():
 
