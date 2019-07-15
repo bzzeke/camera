@@ -37,7 +37,7 @@ class ApiServer(HttpServer):
         cam = args[0]
         if self.cameras:
             if cam in self.cameras:
-                s2 = Bus0(dial=self.cameras[cam]['stream'], recv_timeout=2000 , recv_max_size=0, send_buffer_size=1, recv_buffer_size=1)
+                s2 = Bus0(dial=self.cameras[cam]['stream'], recv_timeout=4000 , recv_max_size=0, send_buffer_size=1, recv_buffer_size=1)
                 msg = s2.recv()
                 s2.close()
 
