@@ -31,6 +31,9 @@ class Streamer():
                     "password": parts.password
                 }
 
+            if "CAM_PTZ_FEATURES_%i" % it in os.environ:
+                self.cameras[os.environ["CAM_NAME_%i" % it]]["ptz_features"] = os.environ["CAM_PTZ_FEATURES_%i" % it]
+
             it += 1
 
 
@@ -52,16 +55,17 @@ class Streamer():
         while True:
 
             (grabbed, frame) = video.read()
-            if self.cameras[cam]["meta"]["dtype"] == None:
-                self.cameras[cam]["meta"]["dtype"]=str(frame.dtype)
-                self.cameras[cam]["meta"]["shape"]=frame.shape
-                self.send_meta()
 
             if not grabbed:
                 print("Reconnecting to camera %s" % cam)
                 video.release()
                 video = self.get_capture(self.cameras[cam]["url"])
                 continue
+
+            if self.cameras[cam]["meta"]["dtype"] == None:
+                self.cameras[cam]["meta"]["dtype"]=str(frame.dtype)
+                self.cameras[cam]["meta"]["shape"]=frame.shape
+                self.send_meta()
 
             s0.send(frame.tostring())
             del frame
