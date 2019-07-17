@@ -33,21 +33,23 @@ class ApiServer(HttpServer):
         self.send_response(200)
         self.send_header('Content-type', 'image/jpeg')
         self.end_headers()
-
         cam = args[0]
         if self.cameras:
             if cam in self.cameras:
-                s2 = Bus0(dial=self.cameras[cam]['stream'], recv_timeout=4000 , recv_max_size=0, send_buffer_size=1, recv_buffer_size=1)
-                msg = s2.recv()
-                s2.close()
 
-                A = numpy.frombuffer(msg, dtype=self.cameras[cam]["meta"]["dtype"])
-                frame = A.reshape(self.cameras[cam]["meta"]['shape'])
+                try:
+                    s2 = Bus0(dial=self.cameras[cam]['stream'], recv_timeout=2000 , recv_max_size=0, send_buffer_size=1, recv_buffer_size=1)
+                    msg = s2.recv()
+                    s2.close()
+                    A = numpy.frombuffer(msg, dtype=self.cameras[cam]["meta"]["dtype"])
+                    frame = A.reshape(self.cameras[cam]["meta"]['shape'])
 
-                del A
-                ret, jpeg = cv2.imencode('.jpg', frame)
+                    del A
+                    ret, jpeg = cv2.imencode('.jpg', frame)
+                    return jpeg.tobytes()
 
-                return jpeg.tobytes()
+                except Exeception:
+                    print("Failed to get image from stream")
 
         return b""
 
