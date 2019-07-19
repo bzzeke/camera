@@ -2,11 +2,15 @@ import cv2, sys
 import socket
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from socketserver import ThreadingMixIn
 from pynng import Bus0, Rep0
 import numpy, json
 import ptz
 import os
 import copy
+
+class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+    pass
 
 class HttpServer(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -118,7 +122,7 @@ def run():
 
     cameras = get_cams_meta()
     print("Starting API server")
-    httpd = HTTPServer(("", int(os.environ["API_SERVER_PORT"])), ApiServer)
+    httpd = ThreadingHTTPServer(("", int(os.environ["API_SERVER_PORT"])), ApiServer)
     httpd.RequestHandlerClass.cameras = cameras
 
     try:
