@@ -28,7 +28,7 @@ class Sighthound():
 
         return resp
 
-    def getClips(self, camera = "", rule = "", date = None, limit = 500):
+    def get_clips(self, camera = "", rule = "", date = None, limit = 500):
 
         if (camera == ""):
             camera = "Any camera"
@@ -98,7 +98,7 @@ class Sighthound():
 
         return result
 
-    def getClipUrl(self, command, clip):
+    def get_clip_url(self, command, clip):
         xml = '''<?xml version="1.0"?>
             <methodCall>
                 <methodName>remoteGetClipUri</methodName>
@@ -180,22 +180,21 @@ class Sighthound():
 
         return dom[0][0][0][0][0][1][0].text
 
-    def getVideoUrl(self, clip, type = None):
+    def get_video_url(self, clip, type = None):
 
         command = "remoteGetClipUriForDownload" if type == "download" else "remoteGetClipUri"
         url = "https://%s:%s@%s%s?%s%s" % (
             self.user,
             self.password,
             self.host,
-            self.getClipUrl(command, clip),
+            self.get_clip_url(command, clip),
             clip["camera"],
             clip["first_timestamp"]
             )
 
         return url
 
-
-    def getThumbnailUrl(self, clip):
+    def get_thumbnail_url(self, clip):
         sizex = 1920
         sizey = 1080
 

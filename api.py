@@ -102,40 +102,50 @@ class ApiServer(HttpServer):
         rule = args[1] if len(args) >= 2 else ""
         date = args[2] if len(args) >= 3 else None
 
-        clips = sy.getClips(camera, rule, date)
+        clips = sy.get_clips(camera, rule, date)
         result = []
         if (clips):
             for ts in clips:
                 result.append({
                     "timestamp": ts,
                     "camera": clips[ts]["camera"],
-                    "thumbnail_url": sy.getThumbnailUrl(clips[ts]),
-                    "video_url": sy.getVideoUrl(clips[ts]),
+                    "thumbnail_url": sy.get_thumbnail_url(clips[ts]),
+                    "generate_video_url": generate_video_url(clips[ts])
                 })
 
         return json.dumps(result).encode("utf-8")
 
-    def download_clip(self, args):
+    def clip(self, args):
         self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
         self.end_headers()
 
         sy = Sighthound(os.environ["SIGHTHOUND_HOST"], os.environ["SIGHTHOUND_USER"], os.environ["SIGHTHOUND_PASSWORD"])
-        camera = args[0] if len(args) >= 1 else ""
-        rule = args[1] if len(args) >= 2 else ""
-        date = args[2] if len(args) >= 3 else None
 
-        clips = sy.getClips(camera, rule, date)
-        result = []
-        if (clips):
-            for ts in clips:
-                result.append({
-                    "timestamp": ts,
-                    "camera": clips[ts]["camera"],
-                    "thumbnail_url": sy.getThumbnailUrl(clips[ts]),
-                    "video_url": sy.getVideoUrl(clips[ts]),
-                })
+        return sy.get_video_url({
+            "camera": args[0],
+            "first_timestamp": int(args[1]),
+            "first_id": int(args[2]),
+            "second_timestamp": int(args[3]),
+            "second_id": int(args[4]),
+            "object_ids": int(args[5])
+        }).encode("utf-8")
 
-        return json.dumps(result).encode("utf-8")
+
+def generate_video_url(clip):
+
+    url = "http://%s:%s/clip/%s/%s/%s/%s/%s/%s" % (
+        get_ip(),
+        os.environ["API_SERVER_PORT"],
+        clip["camera"],
+        clip["first_timestamp"],
+        clip["first_id"],
+        clip["second_timestamp"],
+        clip["second_id"],
+        clip["object_ids"],
+        )
+
+    return url
 
 def get_cams_meta():
 
