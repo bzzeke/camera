@@ -8,6 +8,8 @@ import numpy, json
 import ptz
 import os
 import copy
+import urllib
+from sighthound import Sighthound
 
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     pass
@@ -17,7 +19,8 @@ class HttpServer(BaseHTTPRequestHandler):
         self.respond()
 
     def respond(self):
-        path = self.path.strip("/")
+
+        path = urllib.parse.unquote(self.path).strip("/")
         path = path.split("/")
         method = path[0]
         if hasattr(self, method):
@@ -89,6 +92,50 @@ class ApiServer(HttpServer):
 
         return json.dumps(cameras).encode("utf-8")
 
+    def clips_list(self, args):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+
+        sy = Sighthound(os.environ["SIGHTHOUND_HOST"], os.environ["SIGHTHOUND_USER"], os.environ["SIGHTHOUND_PASSWORD"])
+        camera = args[0] if len(args) >= 1 else ""
+        rule = args[1] if len(args) >= 2 else ""
+        date = args[2] if len(args) >= 3 else None
+
+        clips = sy.getClips(camera, rule, date)
+        result = []
+        if (clips):
+            for ts in clips:
+                result.append({
+                    "timestamp": ts,
+                    "camera": clips[ts]["camera"],
+                    "thumbnail_url": sy.getThumbnailUrl(clips[ts]),
+                    "video_url": sy.getVideoUrl(clips[ts]),
+                })
+
+        return json.dumps(result).encode("utf-8")
+
+    def download_clip(self, args):
+        self.send_response(200)
+        self.end_headers()
+
+        sy = Sighthound(os.environ["SIGHTHOUND_HOST"], os.environ["SIGHTHOUND_USER"], os.environ["SIGHTHOUND_PASSWORD"])
+        camera = args[0] if len(args) >= 1 else ""
+        rule = args[1] if len(args) >= 2 else ""
+        date = args[2] if len(args) >= 3 else None
+
+        clips = sy.getClips(camera, rule, date)
+        result = []
+        if (clips):
+            for ts in clips:
+                result.append({
+                    "timestamp": ts,
+                    "camera": clips[ts]["camera"],
+                    "thumbnail_url": sy.getThumbnailUrl(clips[ts]),
+                    "video_url": sy.getVideoUrl(clips[ts]),
+                })
+
+        return json.dumps(result).encode("utf-8")
 
 def get_cams_meta():
 
