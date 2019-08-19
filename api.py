@@ -100,7 +100,7 @@ class ApiServer(HttpServer):
         sy = Sighthound(os.environ["SIGHTHOUND_HOST"], os.environ["SIGHTHOUND_USER"], os.environ["SIGHTHOUND_PASSWORD"])
         camera = args[0] if len(args) >= 1 else ""
         rule = args[1] if len(args) >= 2 else ""
-        date = args[2] if len(args) >= 3 else None
+        date = int(args[2]) if len(args) >= 3 else None
 
         clips = sy.get_clips(camera, rule, date)
         result = []
@@ -110,7 +110,8 @@ class ApiServer(HttpServer):
                     "timestamp": ts,
                     "camera": clips[ts]["camera"],
                     "thumbnail_url": sy.get_thumbnail_url(clips[ts]),
-                    "generate_video_url": generate_video_url(clips[ts])
+                    "generate_video_url": generate_video_url(clips[ts]),
+                    "objects": clips[ts]["objects"]
                 })
 
         return json.dumps(result).encode("utf-8")

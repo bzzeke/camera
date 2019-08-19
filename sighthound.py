@@ -41,7 +41,7 @@ class Sighthound():
 
         xml = '''<?xml version="1.0"?>
             <methodCall>
-                <methodName>remoteGetClipsForRule</methodName>
+                <methodName>remoteGetClipsForRule2</methodName>
                 <params>
                     <param>
                         <value>
@@ -92,13 +92,27 @@ class Sighthound():
                 'second_timestamp': int(clip[0][0][2][0][0][0][0].text),
                 'second_id': int(clip[0][0][2][0][0][1][0].text),
                 'third_timestamp': int(clip[0][0][3][0][0][0][0].text),
-                'third_id': int(clip[0][0][3][0][0][1][0].text),
-                'object_ids': int(clip[0][0][5][0][0][0][0].text) if len(clip[0][0]) > 5 else 0
+                'third_id': int(clip[0][0][3][0][0][1][0].text)
             }
+
+            objects = {}
+            if len(clip[0][0]) > 5:
+                for object in clip[0][0][5][0][0]:
+                    objects[object[0][0][0][0].text] = object[0][0][1][0].text
+
+                result[str(clip[0][0][1][0][0][0][0].text)]['objects'] = objects
+                result[str(clip[0][0][1][0][0][0][0].text)]['object_ids'] = ",".join(objects.keys())
 
         return result
 
     def get_clip_url(self, command, clip):
+
+        objects_xml = ""
+        for object_id in clip["object_ids"].split(","):
+            objects_xml += '''<value>
+                <int>%d</int>
+            </value>''' % object_id
+
         xml = '''<?xml version="1.0"?>
             <methodCall>
                 <methodName>remoteGetClipUri</methodName>
@@ -154,9 +168,7 @@ class Sighthound():
                                     <value>
                                         <array>
                                             <data>
-                                                <value>
-                                                    <int>%d</int>
-                                                </value>
+                                                %s
                                             </data>
                                         </array>
                                     </value>
@@ -172,7 +184,7 @@ class Sighthound():
                 clip["second_timestamp"],
                 clip["second_id"],
                 random.randrange(1, 999, 1),
-                clip["object_ids"]
+                objects_xml
                 )
 
         response = self.send_request(xml)
