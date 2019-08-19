@@ -8,7 +8,8 @@ import numpy, json
 import ptz
 import os
 import copy
-import urllib
+import urllib, urllib.request
+import shutil, ssl, base64
 from sighthound import Sighthound
 
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
@@ -119,19 +120,26 @@ class ApiServer(HttpServer):
 
     def clip(self, args):
         self.send_response(200)
-        self.send_header('Content-type', 'text/plain')
+        self.send_header('Content-type', 'video/mp4')
         self.end_headers()
 
         sy = Sighthound(os.environ["SIGHTHOUND_HOST"], os.environ["SIGHTHOUND_USER"], os.environ["SIGHTHOUND_PASSWORD"])
 
-        return sy.get_video_url({
+        url = sy.get_video_url({
             "camera": args[0],
             "first_timestamp": int(args[1]),
             "first_id": int(args[2]),
             "second_timestamp": int(args[3]),
             "second_id": int(args[4]),
             "object_ids": args[5]
-        }, args[6] if len(args) > 6 else None).encode("utf-8")
+        }, args[6] if len(args) > 6 else None)
+
+        request = urllib.request.Request(url)
+        base64string = base64.b64encode(b'%s:%s' % (os.environ["SIGHTHOUND_USER"].encode("utf-8"), os.environ["SIGHTHOUND_PASSWORD"].encode("utf-8")))
+        request.add_header("Authorization", "Basic %s" % base64string.decode("utf-8"))
+        shutil.copyfileobj(urllib.request.urlopen(request, context=ssl._create_unverified_context()), self.wfile)
+
+        return b""
 
 
 def generate_video_url(clip, type = ""):

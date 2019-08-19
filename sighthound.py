@@ -197,9 +197,7 @@ class Sighthound():
 
         command = "remoteGetClipUriForDownload" if type == "download" else "remoteGetClipUri"
 
-        url = "https://%s:%s@%s%s?%s%s" % (
-            self.user,
-            self.password,
+        url = "https://%s%s?%s%s" % (
             self.host,
             self.get_clip_url(command, clip),
             clip["camera"],
