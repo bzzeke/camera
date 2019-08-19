@@ -193,13 +193,24 @@ class Sighthound():
 
         return dom[0][0][0][0][0][1][0].text
 
-    def get_video_url(self, clip, type = None):
+    def get_stream_url(self, clip):
 
-        command = "remoteGetClipUriForDownload" if type == "download" else "remoteGetClipUri"
+        url = "https://%s:%s@%s%s?%s%s" % (
+            self.user,
+            self.password,
+            self.host,
+            self.get_clip_url("remoteGetClipUri", clip),
+            clip["camera"],
+            clip["first_timestamp"]
+            )
+
+        return url
+
+    def get_download_url(self, clip):
 
         url = "https://%s%s?%s%s" % (
             self.host,
-            self.get_clip_url(command, clip),
+            self.get_clip_url("remoteGetClipUriForDownload", clip),
             clip["camera"],
             clip["first_timestamp"]
             )
@@ -281,9 +292,7 @@ class Sighthound():
         response = self.send_request(xml)
         dom = ElementTree.fromstring(response)
 
-        url = "https://%s:%s@%s%s" % (
-            self.user,
-            self.password,
+        url = "https://%s%s" % (
             self.host,
             dom[0][0][0][0][0][1][0][0][0][0].text
             )

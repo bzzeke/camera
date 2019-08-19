@@ -56,7 +56,7 @@ class ApiServer(HttpServer):
                     ret, jpeg = cv2.imencode('.jpg', frame)
                     return jpeg.tobytes()
 
-                except Exeception:
+                except Exception:
                     print("Failed to get image from stream")
 
         return b""
@@ -110,29 +110,68 @@ class ApiServer(HttpServer):
                 result.append({
                     "timestamp": ts,
                     "camera": clips[ts]["camera"],
-                    "thumbnail_url": sy.get_thumbnail_url(clips[ts]),
-                    "generate_video_url": generate_video_url(clips[ts]),
-                    "generate_download_url": generate_video_url(clips[ts], "download"),
+                    "thumbnail_url": generate_video_url(clips[ts], "thumbnail"),
+                    "video_stream_url": generate_video_url(clips[ts], "stream"),
+                    "video_download_url": generate_video_url(clips[ts], "download"),
                     "objects": clips[ts]["objects"]
                 })
 
         return json.dumps(result).encode("utf-8")
 
-    def clip(self, args):
+    def stream(self, args):
         self.send_response(200)
-        self.send_header('Content-type', 'video/mp4')
+        self.send_header('Content-type', 'text/plain')
         self.end_headers()
 
         sy = Sighthound(os.environ["SIGHTHOUND_HOST"], os.environ["SIGHTHOUND_USER"], os.environ["SIGHTHOUND_PASSWORD"])
 
-        url = sy.get_video_url({
+        return sy.get_stream_url({
             "camera": args[0],
             "first_timestamp": int(args[1]),
             "first_id": int(args[2]),
             "second_timestamp": int(args[3]),
             "second_id": int(args[4]),
             "object_ids": args[5]
-        }, args[6] if len(args) > 6 else None)
+        }).encode("utf-8")
+
+    def download(self, args):
+        self.send_response(200)
+        self.send_header('Content-type', 'video/mp4')
+        self.end_headers()
+
+        sy = Sighthound(os.environ["SIGHTHOUND_HOST"], os.environ["SIGHTHOUND_USER"], os.environ["SIGHTHOUND_PASSWORD"])
+
+        url = sy.get_download_url({
+            "camera": args[0],
+            "first_timestamp": int(args[1]),
+            "first_id": int(args[2]),
+            "second_timestamp": int(args[3]),
+            "second_id": int(args[4]),
+            "object_ids": args[5]
+        })
+
+        request = urllib.request.Request(url)
+        base64string = base64.b64encode(b'%s:%s' % (os.environ["SIGHTHOUND_USER"].encode("utf-8"), os.environ["SIGHTHOUND_PASSWORD"].encode("utf-8")))
+        request.add_header("Authorization", "Basic %s" % base64string.decode("utf-8"))
+        shutil.copyfileobj(urllib.request.urlopen(request, context=ssl._create_unverified_context()), self.wfile)
+
+        return b""
+
+    def thumbnail(self, args):
+        self.send_response(200)
+        self.send_header('Content-type', 'image/jpeg')
+        self.end_headers()
+
+        sy = Sighthound(os.environ["SIGHTHOUND_HOST"], os.environ["SIGHTHOUND_USER"], os.environ["SIGHTHOUND_PASSWORD"])
+
+        url = sy.get_thumbnail_url({
+            "camera": args[0],
+            "first_timestamp": int(args[1]),
+            "first_id": int(args[2]),
+            "second_timestamp": int(args[3]),
+            "second_id": int(args[4]),
+            "object_ids": args[5]
+        })
 
         request = urllib.request.Request(url)
         base64string = base64.b64encode(b'%s:%s' % (os.environ["SIGHTHOUND_USER"].encode("utf-8"), os.environ["SIGHTHOUND_PASSWORD"].encode("utf-8")))
@@ -144,16 +183,16 @@ class ApiServer(HttpServer):
 
 def generate_video_url(clip, type = ""):
 
-    url = "http://%s:%s/clip/%s/%s/%s/%s/%s/%s/%s" % (
+    url = "http://%s:%s/%s/%s/%s/%s/%s/%s/%s" % (
         get_ip(),
         os.environ["API_SERVER_PORT"],
+        type,
         clip["camera"],
         clip["first_timestamp"],
         clip["first_id"],
         clip["second_timestamp"],
         clip["second_id"],
-        clip["object_ids"],
-        type,
+        clip["object_ids"]
         )
 
     return url
