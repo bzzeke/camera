@@ -111,6 +111,7 @@ class ApiServer(HttpServer):
                     "camera": clips[ts]["camera"],
                     "thumbnail_url": sy.get_thumbnail_url(clips[ts]),
                     "generate_video_url": generate_video_url(clips[ts]),
+                    "generate_download_url": generate_video_url(clips[ts], "download"),
                     "objects": clips[ts]["objects"]
                 })
 
@@ -129,13 +130,13 @@ class ApiServer(HttpServer):
             "first_id": int(args[2]),
             "second_timestamp": int(args[3]),
             "second_id": int(args[4]),
-            "object_ids": int(args[5])
-        }).encode("utf-8")
+            "object_ids": args[5]
+        }, args[6] if len(args) > 6 else None).encode("utf-8")
 
 
-def generate_video_url(clip):
+def generate_video_url(clip, type = ""):
 
-    url = "http://%s:%s/clip/%s/%s/%s/%s/%s/%s" % (
+    url = "http://%s:%s/clip/%s/%s/%s/%s/%s/%s/%s" % (
         get_ip(),
         os.environ["API_SERVER_PORT"],
         clip["camera"],
@@ -144,6 +145,7 @@ def generate_video_url(clip):
         clip["second_timestamp"],
         clip["second_id"],
         clip["object_ids"],
+        type,
         )
 
     return url

@@ -110,12 +110,12 @@ class Sighthound():
         objects_xml = ""
         for object_id in clip["object_ids"].split(","):
             objects_xml += '''<value>
-                <int>%d</int>
+                <int>%s</int>
             </value>''' % object_id
 
         xml = '''<?xml version="1.0"?>
             <methodCall>
-                <methodName>remoteGetClipUri</methodName>
+                <methodName>%s</methodName>
                 <params>
                     <param>
                         <value>
@@ -178,6 +178,7 @@ class Sighthound():
                     </param>
                 </params>
             </methodCall>''' % (
+                command,
                 clip["camera"],
                 clip["first_timestamp"],
                 clip["first_id"],
@@ -195,6 +196,7 @@ class Sighthound():
     def get_video_url(self, clip, type = None):
 
         command = "remoteGetClipUriForDownload" if type == "download" else "remoteGetClipUri"
+
         url = "https://%s:%s@%s%s?%s%s" % (
             self.user,
             self.password,
