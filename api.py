@@ -111,33 +111,14 @@ class ApiServer(HttpServer):
                     "timestamp": ts,
                     "camera": clips[ts]["camera"],
                     "thumbnail_url": generate_video_url(clips[ts], "thumbnail"),
-                    "video_stream_url": generate_video_url(clips[ts], "stream"),
-                    "video_download_url": generate_video_url(clips[ts], "download"),
+                    "video_url": generate_video_url(clips[ts], "video"),
                     "objects": clips[ts]["objects"]
                 })
 
         return json.dumps(result).encode("utf-8")
 
-    def stream(self, args):
+    def video(self, args):
         self.send_response(200)
-        self.send_header('Content-type', 'text/plain')
-        self.end_headers()
-
-        sy = Sighthound(os.environ["SIGHTHOUND_HOST"], os.environ["SIGHTHOUND_USER"], os.environ["SIGHTHOUND_PASSWORD"])
-
-        return sy.get_stream_url({
-            "camera": args[0],
-            "first_timestamp": int(args[1]),
-            "first_id": int(args[2]),
-            "second_timestamp": int(args[3]),
-            "second_id": int(args[4]),
-            "object_ids": args[5]
-        }).encode("utf-8")
-
-    def download(self, args):
-        self.send_response(200)
-        self.send_header('Content-type', 'video/mp4')
-        self.end_headers()
 
         sy = Sighthound(os.environ["SIGHTHOUND_HOST"], os.environ["SIGHTHOUND_USER"], os.environ["SIGHTHOUND_PASSWORD"])
 
@@ -153,7 +134,17 @@ class ApiServer(HttpServer):
         request = urllib.request.Request(url)
         base64string = base64.b64encode(b'%s:%s' % (os.environ["SIGHTHOUND_USER"].encode("utf-8"), os.environ["SIGHTHOUND_PASSWORD"].encode("utf-8")))
         request.add_header("Authorization", "Basic %s" % base64string.decode("utf-8"))
-        shutil.copyfileobj(urllib.request.urlopen(request, context=ssl._create_unverified_context()), self.wfile)
+        if self.headers.get("Range"):
+            request.add_header("Range", self.headers.get("Range"))
+        handle = urllib.request.urlopen(request, context=ssl._create_unverified_context())
+        headers = dict(handle.headers)
+        for hname in headers:
+            if hname in ["Connection", "Date", "Server"]:
+                continue
+            self.send_header(hname, headers[hname])
+        self.end_headers()
+
+        shutil.copyfileobj(handle, self.wfile)
 
         return b""
 
