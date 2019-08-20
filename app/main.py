@@ -9,7 +9,7 @@ from threading import Thread
 
 
 def import_env():
-    filepath = os.path.dirname(os.path.realpath(__file__)) + '/.env'
+    filepath = os.path.dirname(os.path.realpath(__file__)) + '/../.env'
     if not os.path.isfile(filepath):
         return
 
