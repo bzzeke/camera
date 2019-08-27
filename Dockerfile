@@ -20,7 +20,6 @@ RUN \
 	fdk-aac \
 	jasper-libs \
 	freetype && \
-
 	# Install build tools
 	apk add --virtual build-deps \
 	coreutils \
@@ -59,7 +58,6 @@ RUN apk add \
 	# FFmpeg
 RUN	export SRC=/usr \
 	export FFMPEG_VERSION=4.1.3 \
-
 	DIR=$(mktemp -d) && cd ${DIR} && \
 	curl -Os http://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.gz && \
 	tar xzvf ffmpeg-${FFMPEG_VERSION}.tar.gz && \
@@ -93,7 +91,6 @@ RUN	export OPENCV_VERSION=3.4.6 \
 	CONTRIB_DIR=$(mktemp -d) && cd ${CONTRIB_DIR} && \
 	curl -SL -O https://github.com/opencv/opencv_contrib/archive/${OPENCV_VERSION}.tar.gz && \
 	tar xzvf ${OPENCV_VERSION}.tar.gz && \
-
 	DIR=$(mktemp -d) && cd ${DIR} && \
 	curl -SL -O https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.tar.gz && \
 	tar xzvf ${OPENCV_VERSION}.tar.gz && \
@@ -118,7 +115,6 @@ RUN	export OPENCV_VERSION=3.4.6 \
 	make install && \
 	cd /tmp && \
 	rm -rf ${DIR} && \
-
 	# Cleaning up
 	apk del build-deps && \
 	rm -rf /var/cache/apk/*
