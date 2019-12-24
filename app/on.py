@@ -22,28 +22,19 @@ class OnvifCam():
         self.x = 0
         self.header = useheader
 
-    def setup(self, ipaddr, cpath="/onvif/device_service", profile="prof0"):
-        self.camIP = ipaddr
-        self.cpath = cpath
-        self.profiletoken = profile
+    def setup(self, host, port, cpath="/onvif/device_service", profile="prof0"):
 
+        self.cpath = cpath
         self.profiletoken = profile
         self.movespeed = "0.5"
         self.zoomspeed = "0.1"
 
-        self.conn = http.client.HTTPConnection(self.camIP)
+        self.conn = http.client.HTTPConnection(host, int(port))
         return True
 
     def setAuth(self, un, pwd):
         self.username = un
         self.password = pwd
-
-    def setCamIP(self,ip):
-        self.camIP = ip
-        return self.camIP
-
-    def getCamIP(self):
-        return self.camIP
 
     def setProfileToken(self, token):
         self.profiletoken = token
@@ -56,12 +47,6 @@ class OnvifCam():
             return self.profiles
         else:
             return []
-
-    def setCpath(self, path):
-        self.cpath=path
-
-    def getCpath(self):
-        return self.cpath
 
   # SOAP handling utility functions
 
