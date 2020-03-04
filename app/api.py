@@ -20,7 +20,6 @@ class HttpServer(BaseHTTPRequestHandler):
         self.respond()
 
     def respond(self):
-
         path = urllib.parse.unquote(self.path).strip("/")
         path = path.split("/")
         method = path[0]
@@ -81,13 +80,13 @@ class ApiServer(HttpServer):
         self.end_headers()
 
         cameras = []
-        ip = get_ip()
+        host = self.headers["Host"]
         for cam in self.cameras:
             camera = copy.deepcopy(self.cameras[cam])
             del camera["meta"]
             camera["name"] = cam
-            camera["snapshot_url"] = "http://%s:%s/snapshot/%s" % (ip, os.environ["API_SERVER_PORT"], cam)
-            camera["ptz_url"] = "http://%s:%s/ptz/%s" % (ip, os.environ["API_SERVER_PORT"], cam)
+            camera["snapshot_url"] = "http://%s/snapshot/%s" % (host, cam)
+            camera["ptz_url"] = "http://%s/ptz/%s" % (host, cam)
 
             cameras.append(camera)
 
@@ -105,13 +104,14 @@ class ApiServer(HttpServer):
 
         clips = sy.get_clips(camera, rule, date)
         result = []
+        host = self.headers["Host"]
         if (clips):
             for ts in clips:
                 result.append({
                     "timestamp": ts,
                     "camera": clips[ts]["camera"],
-                    "thumbnail_url": generate_video_url(clips[ts], "thumbnail"),
-                    "video_url": generate_video_url(clips[ts], "video"),
+                    "thumbnail_url": generate_video_url(clips[ts], host, "thumbnail"),
+                    "video_url": generate_video_url(clips[ts], host, "video"),
                     "objects": clips[ts]["objects"]
                 })
 
@@ -172,11 +172,10 @@ class ApiServer(HttpServer):
         return b""
 
 
-def generate_video_url(clip, type = ""):
+def generate_video_url(clip, host, type = ""):
 
-    url = "http://%s:%s/%s/%s/%s/%s/%s/%s/%s" % (
-        get_ip(),
-        os.environ["API_SERVER_PORT"],
+    url = "http://%s/%s/%s/%s/%s/%s/%s/%s" % (
+        host,
         type,
         clip["camera"],
         clip["first_timestamp"],
@@ -209,12 +208,6 @@ def get_cams_meta():
     s1.close()
 
     return cameras
-
-def get_ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    s.connect(('<broadcast>', 0))
-    return s.getsockname()[0]
 
 def run():
 
