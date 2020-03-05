@@ -81,12 +81,13 @@ class ApiServer(HttpServer):
 
         cameras = []
         host = self.headers["Host"]
+        is_https = "HTTPS" in self.headers
         for cam in self.cameras:
             camera = copy.deepcopy(self.cameras[cam])
             del camera["meta"]
             camera["name"] = cam
-            camera["snapshot_url"] = "http://%s/snapshot/%s" % (host, cam)
-            camera["ptz_url"] = "http://%s/ptz/%s" % (host, cam)
+            camera["snapshot_url"] = "%s://%s/snapshot/%s" % ("https" if is_https else "http", host, cam)
+            camera["ptz_url"] = "%s://%s/ptz/%s" % ("https" if is_https else "http", host, cam)
 
             cameras.append(camera)
 
@@ -105,13 +106,14 @@ class ApiServer(HttpServer):
         clips = sy.get_clips(camera, rule, date)
         result = []
         host = self.headers["Host"]
+        is_https = "HTTPS" in self.headers
         if (clips):
             for ts in clips:
                 result.append({
                     "timestamp": ts,
                     "camera": clips[ts]["camera"],
-                    "thumbnail_url": generate_video_url(clips[ts], host, "thumbnail"),
-                    "video_url": generate_video_url(clips[ts], host, "video"),
+                    "thumbnail_url": generate_video_url(clips[ts], host, "https" if is_https else "http", "thumbnail"),
+                    "video_url": generate_video_url(clips[ts], host, "https" if is_https else "http", "video"),
                     "objects": clips[ts]["objects"]
                 })
 
@@ -172,9 +174,10 @@ class ApiServer(HttpServer):
         return b""
 
 
-def generate_video_url(clip, host, type = ""):
+def generate_video_url(clip, host, protocol, type = ""):
 
-    url = "http://%s/%s/%s/%s/%s/%s/%s/%s" % (
+    url = "%s://%s/%s/%s/%s/%s/%s/%s/%s" % (
+        protocol,
         host,
         type,
         clip["camera"],
