@@ -80,14 +80,12 @@ class ApiServer(HttpServer):
         self.end_headers()
 
         cameras = []
-        host = self.headers["Host"]
-        is_https = "HTTPS" in self.headers
         for cam in self.cameras:
             camera = copy.deepcopy(self.cameras[cam])
             del camera["meta"]
             camera["name"] = cam
-            camera["snapshot_url"] = "%s://%s/snapshot/%s" % ("https" if is_https else "http", host, cam)
-            camera["ptz_url"] = "%s://%s/ptz/%s" % ("https" if is_https else "http", host, cam)
+            camera["snapshot_url"] = "http://%s/snapshot/%s" % (os.environ["API_SERVER_HOST"], cam)
+            camera["ptz_url"] = "http://%s/ptz/%s" % (os.environ["API_SERVER_HOST"], cam)
 
             cameras.append(camera)
 
@@ -105,15 +103,13 @@ class ApiServer(HttpServer):
 
         clips = sy.get_clips(camera, rule, date)
         result = []
-        host = self.headers["Host"]
-        is_https = "HTTPS" in self.headers
         if (clips):
             for ts in clips:
                 result.append({
                     "timestamp": ts,
                     "camera": clips[ts]["camera"],
-                    "thumbnail_url": generate_video_url(clips[ts], host, "https" if is_https else "http", "thumbnail"),
-                    "video_url": generate_video_url(clips[ts], host, "https" if is_https else "http", "video"),
+                    "thumbnail_url": generate_video_url(clips[ts], "thumbnail"),
+                    "video_url": generate_video_url(clips[ts], "video"),
                     "objects": clips[ts]["objects"]
                 })
 
@@ -173,12 +169,31 @@ class ApiServer(HttpServer):
 
         return b""
 
+    def mapping(self, args):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
 
-def generate_video_url(clip, host, protocol, type = ""):
+        mapping = {
+            "cameras": {}
+        }
 
-    url = "%s://%s/%s/%s/%s/%s/%s/%s/%s" % (
-        protocol,
-        host,
+        it = 0
+        while "MAPPING_%i" % it in os.environ:
+            hosts = os.environ["MAPPING_%i" % it].split("/")
+            mapping[hosts[0]] = hosts[1]
+            it += 1
+
+        for cam in self.cameras:
+            mapping["cameras"][self.cameras[cam]["url"]] = os.environ["MAPPING_CAMERA"] % cam
+
+        return json.dumps(mapping).encode("utf-8")
+
+
+def generate_video_url(clip, type = ""):
+
+    url = "http://%s/%s/%s/%s/%s/%s/%s/%s" % (
+        os.environ["API_SERVER_HOST"],
         type,
         clip["camera"],
         clip["first_timestamp"],
