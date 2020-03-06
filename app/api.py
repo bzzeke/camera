@@ -84,8 +84,8 @@ class ApiServer(HttpServer):
             camera = copy.deepcopy(self.cameras[cam])
             del camera["meta"]
             camera["name"] = cam
-            camera["snapshot_url"] = "http://%s/snapshot/%s" % (os.environ["API_SERVER_HOST"], cam)
-            camera["ptz_url"] = "http://%s/ptz/%s" % (os.environ["API_SERVER_HOST"], cam)
+            camera["snapshot_url"] = "http://%s:%s/snapshot/%s" % (os.environ["API_SERVER_HOST"], os.environ["API_SERVER_HOST"], cam)
+            camera["ptz_url"] = "http://%s:%s/ptz/%s" % (os.environ["API_SERVER_HOST"], os.environ["API_SERVER_HOST"], cam)
 
             cameras.append(camera)
 
@@ -192,8 +192,9 @@ class ApiServer(HttpServer):
 
 def generate_video_url(clip, type = ""):
 
-    url = "http://%s/%s/%s/%s/%s/%s/%s/%s" % (
+    url = "http://%s:%s/%s/%s/%s/%s/%s/%s/%s" % (
         os.environ["API_SERVER_HOST"],
+        os.environ["API_SERVER_PORT"],
         type,
         clip["camera"],
         clip["first_timestamp"],
