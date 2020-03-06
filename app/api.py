@@ -180,7 +180,7 @@ class ApiServer(HttpServer):
 
         it = 0
         while "MAPPING_%i" % it in os.environ:
-            hosts = os.environ["MAPPING_%i" % it].split("/")
+            hosts = os.environ["MAPPING_%i" % it].split("|")
             mapping[hosts[0]] = hosts[1]
             it += 1
 
