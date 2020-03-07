@@ -84,8 +84,8 @@ class ApiServer(HttpServer):
             camera = copy.deepcopy(self.cameras[cam])
             del camera["meta"]
             camera["name"] = cam
-            camera["snapshot_url"] = "http://%s:%s/snapshot/%s" % (os.environ["API_SERVER_HOST"], os.environ["API_SERVER_HOST"], cam)
-            camera["ptz_url"] = "http://%s:%s/ptz/%s" % (os.environ["API_SERVER_HOST"], os.environ["API_SERVER_HOST"], cam)
+            camera["snapshot_url"] = "http://%s:%s/snapshot/%s" % (os.environ["API_SERVER_HOST"], os.environ["API_SERVER_PORT"], cam)
+            camera["ptz_url"] = "http://%s:%s/ptz/%s" % (os.environ["API_SERVER_HOST"], os.environ["API_SERVER_PORT"], cam)
 
             cameras.append(camera)
 
