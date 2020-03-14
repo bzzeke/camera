@@ -6,6 +6,7 @@ import json
 from threading import Thread
 import os
 from urllib.parse import urlparse
+from urllib import request
 
 class Streamer():
     cameras = {}
@@ -14,6 +15,7 @@ class Streamer():
         it = 0
         while "CAM_NAME_%i" % it in os.environ:
             self.cameras[os.environ["CAM_NAME_%i" % it]] = {
+                "name": os.environ["CAM_NAME_%i" % it],
                 "url": os.environ["CAM_URL_%i" % it],
                 "stream": os.environ["CAM_STREAM_%i" % it],
                 "meta": {
@@ -37,15 +39,15 @@ class Streamer():
             it += 1
 
 
-    def send_meta(self):
-        print("Checking if meta information is filled")
-        for cam in self.cameras:
-            if self.cameras[cam]["meta"]["dtype"] == None:
-                return
+    def send_meta(self, cam):
 
-        print("Sending meta information")
-        s1 = Req0(dial=os.environ["META_SERVER_ADDRESS"], recv_timeout=2000)
-        s1.send(json.dumps(self.cameras).encode("utf-8"))
+        print("Sending meta information for camera %s" % self.cameras[cam])
+
+        params = json.dumps(self.cameras[cam]).encode("utf8")
+        url = "http://%s:%s" % (os.environ["API_SERVER_HOST"], os.environ["API_SERVER_PORT"])
+        req = request.Request(url, data=params, headers={'content-type': 'application/json'})
+        response = request.urlopen(req)
+        print("Got response: %s" % response)
 
     def stream(self, cam):
         video = self.get_capture(self.cameras[cam]["url"])
@@ -65,7 +67,7 @@ class Streamer():
             if self.cameras[cam]["meta"]["dtype"] == None:
                 self.cameras[cam]["meta"]["dtype"]=str(frame.dtype)
                 self.cameras[cam]["meta"]["shape"]=frame.shape
-                self.send_meta()
+                self.send_meta(cam)
 
             s0.send(frame.tostring())
             del frame
