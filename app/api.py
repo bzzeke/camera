@@ -43,15 +43,16 @@ class ApiServer(HttpServer):
 
         content_length = int(self.headers['Content-Length'])
         body = self.rfile.read(content_length)
-        camera =json.loads(body.decode("utf-8"))
 
+        response = b"NOT PROCESSED"
         lock.acquire()
         try:
+            camera = json.loads(body.decode("utf-8"))
             self.cameras[camera["name"]] = camera
+            response = b"OK"
         finally:
             lock.release()
 
-        response = b"OK"
         self.send_response(200)
         self.end_headers()
         self.wfile.write(response)

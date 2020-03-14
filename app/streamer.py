@@ -41,13 +41,13 @@ class Streamer():
 
     def send_meta(self, cam):
 
-        print("Sending meta information for camera %s" % self.cameras[cam])
+        print("Sending meta information for camera %s" % cam)
 
         params = json.dumps(self.cameras[cam]).encode("utf8")
         url = "http://%s:%s" % (os.environ["API_SERVER_HOST"], os.environ["API_SERVER_PORT"])
         req = request.Request(url, data=params, headers={'content-type': 'application/json'})
         response = request.urlopen(req)
-        print("Got response: %s" % response)
+        print("Got response: %s" % response.read().decode())
 
     def stream(self, cam):
         video = self.get_capture(self.cameras[cam]["url"])
