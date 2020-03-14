@@ -62,6 +62,7 @@ class Streamer():
                 print("Reconnecting to camera %s" % cam)
                 video.release()
                 video = self.get_capture(self.cameras[cam]["url"])
+                time.sleep(5)
                 continue
 
             if self.cameras[cam]["meta"]["dtype"] == None:
