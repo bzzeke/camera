@@ -11,6 +11,9 @@ import copy
 import urllib, urllib.request
 import shutil, ssl, base64
 from sighthound import Sighthound
+from threading import RLock
+
+lock = RLock()
 
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     pass
@@ -41,7 +44,12 @@ class ApiServer(HttpServer):
         content_length = int(self.headers['Content-Length'])
         body = self.rfile.read(content_length)
         camera =json.loads(body.decode("utf-8"))
-        self.cameras[camera["name"]] = camera
+
+        lock.acquire()
+        try:
+            self.cameras[camera["name"]] = camera
+        finally:
+            lock.release()
 
         response = b"OK"
         self.send_response(200)
