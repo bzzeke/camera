@@ -32,8 +32,11 @@ if __name__ == "__main__":
     s.start()
     total_threads = threading.active_count()
 
-    while True:
-        time.sleep(1)
-        if threading.active_count() < total_threads:
-            print("Some thread is dead")
-            sys.exit(1)
+    try:
+        while True:
+            time.sleep(1)
+            if threading.active_count() < total_threads:
+                print("Some thread is dead")
+                sys.exit(1)
+    except KeyboardInterrupt:
+        pass

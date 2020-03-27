@@ -7,7 +7,6 @@ from threading import Thread
 import os
 from urllib.parse import urlparse
 from urllib import request
-import cv2
 import gi
 
 gi.require_version('Gst', '1.0')
@@ -15,7 +14,7 @@ gi.require_version('GstRtspServer', '1.0')
 from gi.repository import Gst, GstRtspServer, GObject
 
 class SensorFactory(GstRtspServer.RTSPMediaFactory):
-    def __init__(self, camera, **properties):
+    def __init__(self, camera, width, height, **properties):
         super(SensorFactory, self).__init__(**properties)
         self.camera = camera
         self.s2 = Bus0(dial=self.camera['stream'], recv_timeout=2000 , recv_max_size=0, send_buffer_size=1, recv_buffer_size=1)
@@ -23,10 +22,10 @@ class SensorFactory(GstRtspServer.RTSPMediaFactory):
         self.fps = 10
         self.duration = 1 / self.fps * Gst.SECOND  # duration of a frame in nanoseconds
         self.launch_string = 'appsrc name=source is-live=true block=true format=GST_FORMAT_TIME ' \
-                             'caps=video/x-raw,format=BGR,width=1920,height=1080,framerate={}/1 ' \
+                             'caps=video/x-raw,format=BGR,width={},height={},framerate={}/1 ' \
                              '! videoconvert ! video/x-raw,format=I420 ' \
                              '! x264enc speed-preset=ultrafast tune=zerolatency ' \
-                             '! rtph264pay config-interval=1 name=pay0 pt=96'.format(self.fps)
+                             '! rtph264pay config-interval=1 name=pay0 pt=96'.format(width, height, self.fps)
 
     def on_need_data(self, src, lenght):
 
@@ -61,9 +60,27 @@ class SensorFactory(GstRtspServer.RTSPMediaFactory):
 
 class GstServer(GstRtspServer.RTSPServer):
 
-    def attach_stream(self, camera):
-        factory = SensorFactory(camera)
+    permissions: None
+
+    def __init__(self, **properties):
+        super(GstServer, self).__init__(**properties)
+        auth = GstRtspServer.RTSPAuth()
+        token = GstRtspServer.RTSPToken()
+        token.set_string("media.factory.role", "user")
+        basic = GstRtspServer.RTSPAuth.make_basic(os.environ["RTSP_USER"], os.environ["RTSP_PASSWORD"])
+        auth.add_basic(basic, token)
+        self.set_auth(auth)
+        self.permissions = GstRtspServer.RTSPPermissions()
+        self.permissions.add_permission_for_role("user", "media.factory.access", True)
+        self.permissions.add_permission_for_role("user", "media.factory.construct", True)
+
+
+    def attach_stream(self, camera, width, height):
+        factory = SensorFactory(camera, width, height)
         factory.set_shared(True)
+
+        factory.set_permissions(self.permissions)
+
         self.get_mount_points().add_factory("/%s" % camera["name"], factory)
         self.attach(None)
 
@@ -71,9 +88,10 @@ class GstServer(GstRtspServer.RTSPServer):
 
 class Streamer(Thread):
     camera = {}
-    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera=None):
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera=None, rtsp_server=None):
         super(Streamer, self).__init__(group=group, target=target, name=name)
         self.camera = camera
+        self.rtsp_server = rtsp_server
         self.stop = False
 
     def send_meta(self):
@@ -109,6 +127,10 @@ class Streamer(Thread):
                 self.camera["meta"]["dtype"]=str(frame.dtype)
                 self.camera["meta"]["shape"]=frame.shape
                 self.send_meta()
+
+                width  = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+                height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                self.rtsp_server.attach_stream(self.camera, width, height)
 
             s0.send(frame.tostring())
             del frame
@@ -150,13 +172,14 @@ def get_camera():
 def run():
     GObject.threads_init()
     Gst.init(None)
-    server = GstServer()
+    # print(Gst.version_string())
+
+    rtsp_server = GstServer()
 
     threads = []
     for cam, camera in get_camera():
-        thread = Streamer(camera=camera)
+        thread = Streamer(camera=camera, rtsp_server=rtsp_server)
         thread.start()
-        server.attach_stream(camera)
         threads.append(thread)
 
 
