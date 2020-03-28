@@ -17,13 +17,13 @@ RUN \
 	libvorbis \
 	opus \
 	lame \
-	fdk-aac \
+	# fdk-aac \
 	jasper-libs \
 	freetype && \
 	# Install build tools
 	apk add --virtual build-deps \
 	coreutils \
-	fdk-aac-dev \
+	# fdk-aac-dev \
 	freetype-dev \
 	x264-dev \
 	x265-dev \
@@ -49,7 +49,8 @@ RUN \
 	clang \
 	linux-headers \
 	git \
-	curl
+	curl \
+	perl
 
 RUN apk add \
 	libffi \
@@ -64,7 +65,7 @@ RUN	export SRC=/usr \
 	cd ffmpeg-${FFMPEG_VERSION} && \
 	./configure --prefix="${SRC}" --extra-cflags="-I${SRC}/include" --extra-ldflags="-L${SRC}/lib" --bindir="${SRC}/bin" \
 		--extra-libs=-ldl --enable-version3 --enable-libmp3lame --enable-pthreads --enable-libx264 --enable-libxvid --enable-gpl \
-		--enable-postproc --enable-nonfree --enable-avresample --enable-libfdk-aac --disable-debug --enable-small --enable-openssl \
+		--enable-postproc --enable-nonfree --enable-avresample --disable-debug --enable-small --enable-openssl \
 		--enable-libx265 --enable-libopus --enable-libvorbis --enable-libvpx --enable-libfreetype --enable-libass \
 		--enable-shared --enable-pic --disable-logging && \
 	make -j8 && \
@@ -119,7 +120,14 @@ RUN	export OPENCV_VERSION=3.4.6 \
 	apk del build-deps && \
 	rm -rf /var/cache/apk/*
 
+RUN	apk add py3-gobject3 py3-gst gst-rtsp-server gst-plugins-ugly gst-plugins-good gstreamer-tools
+RUN cp -r /usr/lib/python3.7/site-packages/cairo /usr/local/lib/python3.7/site-packages/
+RUN cp -r /usr/lib/python3.7/site-packages/gi /usr/local/lib/python3.7/site-packages/
+RUN cp -r /usr/lib/python3.7/site-packages/pygtkcompat /usr/local/lib/python3.7/site-packages/
+RUN cp /usr/lib/libpython3.7m.so.1.0 /usr/lib/libpython3.7m.so
+
 WORKDIR /app
 VOLUME /app
 
+#run gst-inspect to avoid gst segfault
 CMD ["python3", "-u", "/app/main.py"]
