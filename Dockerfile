@@ -81,7 +81,7 @@ RUN	pip install --no-cache-dir \
 	numpy==1.16.1 \
 	Pillow==5.4.1 \
 	av==6.1.2 \
-	pynng
+	pyzmq
 
 	## OpenCV
 RUN	export OPENCV_VERSION=3.4.6 \
@@ -119,12 +119,6 @@ RUN	export OPENCV_VERSION=3.4.6 \
 	# Cleaning up
 	apk del build-deps && \
 	rm -rf /var/cache/apk/*
-
-RUN	apk add py3-gobject3 py3-gst gst-rtsp-server gst-plugins-ugly gst-plugins-good gstreamer-tools
-RUN cp -r /usr/lib/python3.7/site-packages/cairo /usr/local/lib/python3.7/site-packages/
-RUN cp -r /usr/lib/python3.7/site-packages/gi /usr/local/lib/python3.7/site-packages/
-RUN cp -r /usr/lib/python3.7/site-packages/pygtkcompat /usr/local/lib/python3.7/site-packages/
-RUN cp /usr/lib/libpython3.7m.so.1.0 /usr/lib/libpython3.7m.so
 
 WORKDIR /app
 VOLUME /app
