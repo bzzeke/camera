@@ -15,6 +15,7 @@ import time
 from shutil import move
 from datetime import date
 from api import Api
+from notifier import Notifier
 
 sys.path.append("detectors")
 
@@ -142,8 +143,14 @@ class Phase2Detector(Thread):
                             use_normalized_coordinates=True,
                             line_thickness=3)
 
-                        snapshot_filename = api.path(frame["camera"], frame["start_time"], "jpeg")
-                        os.makedirs(os.path.dirname(snapshot_filename), exist_ok=True)
-                        cv2.imwrite(snapshot_filename, frame_img)
+                        self.save_snapshot(frame_img, frame, api)
 
-                        self.meta[frame["camera"]][frame["start_time"]]["snapshot"] = True
+    def save_snapshot(self, frame_img, frame, api):
+        snapshot_filename = api.path(frame["camera"], frame["start_time"], "jpeg")
+        os.makedirs(os.path.dirname(snapshot_filename), exist_ok=True)
+        cv2.imwrite(snapshot_filename, frame_img)
+
+        notifier = Notifier()
+        notifier.notify("Motion detected on camera {}".format(frame["camera"]), [snapshot_filename])
+
+        self.meta[frame["camera"]][frame["start_time"]]["snapshot"] = True
