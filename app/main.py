@@ -23,24 +23,21 @@ def import_env():
 class State():
     cameras = {}
     lock = RLock()
-    phase1 = None
-    object_detector = None
+    threads = []
+    q = queue.Queue()
 
     def set_camera(self, camera):
         self.lock.acquire()
         try:
             self.cameras[camera["name"]] = camera
 
-            q = queue.Queue()
-            self.phase1 = Phase1Detector(camera=camera, queue=q)
-            self.object_detector = Phase2Detector(queue=q)
-
-            self.object_detector.start()
-            self.phase1.start()
-
+            phase1 = Phase1Detector(camera=camera, queue=self.q)
+            phase1.start()
+            self.threads.append(phase1)
 
         finally:
             self.lock.release()
+
 
 
 if __name__ == "__main__":
@@ -49,6 +46,8 @@ if __name__ == "__main__":
 
     state = State()
 
+    object_detector = Phase2Detector(queue=state.q)
+    object_detector.start()
 
     p = Thread(target = streamer.run, args=(state,))
     p.daemon = True
@@ -57,9 +56,6 @@ if __name__ == "__main__":
     p = Thread(target = api.run, args=(state,))
     p.daemon = True
     p.start()
-
-    # detector = Detector(state=state)
-    # detector.start()
 
     total_threads = threading.active_count()
 
