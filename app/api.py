@@ -10,15 +10,54 @@ import os
 import copy
 import urllib, urllib.request
 import shutil, ssl, base64
-from sighthound import Sighthound
-from threading import RLock
+import re
+from datetime import date
+import pickledb
 
-lock = RLock()
+class Api:
+    def get_clips(self, camera, rule, date):
+        filepath = self.db_path(date)
+        if os.path.isfile(filepath):
+            db = pickledb.load(filepath, True, sig=False)
+            clips = db.lgetall("clips")
+            if camera != "":
+                clips = list(filter(lambda item: item["camera"] == camera, clips))
+            if rule != "":
+                clips = list(filter(lambda item: rule in item["objects"], clips))
 
-class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
-    pass
+            return sorted(clips, key = lambda item: item["start_time"], reverse=True)
 
-class HttpServer(BaseHTTPRequestHandler):
+        return False
+
+    def get_video(self, camera, timestamp):
+        filepath = self.path(camera, timestamp, "mp4")
+        if os.path.isfile(filepath):
+            return filepath
+
+        return False
+
+    def get_thumbnail(self, camera, timestamp):
+        filepath = self.path(camera, timestamp, "jpeg")
+        if os.path.isfile(filepath):
+            return filepath
+
+        return False
+
+    def db_path(self, timestamp):
+        clip_date = date.fromtimestamp(timestamp)
+        return "{}/{}/{}/{}/meta.json".format(os.environ["DETECTOR_STORAGE_PATH"], clip_date.year, clip_date.month, clip_date.day)
+
+    def path(self, camera, timestamp, ext):
+        clip_date = date.fromtimestamp(timestamp)
+        return "{}/{}/{}/{}/{}/{}.{}".format(os.environ["DETECTOR_STORAGE_PATH"], clip_date.year, clip_date.month, clip_date.day, camera, timestamp, ext)
+
+class ApiHTTPServer(ThreadingMixIn, HTTPServer):
+    state = None
+    def __init__(self, server_address, RequestHandlerClass, bind_and_activate=True, state=None):
+        super(ApiHTTPServer, self).__init__(server_address, RequestHandlerClass, bind_and_activate=bind_and_activate)
+        self.state = state
+
+class HTTPHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         self.respond()
@@ -51,35 +90,16 @@ class HttpServer(BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
-class ApiServer(HttpServer):
-    cameras = {}
-
-    def camera(self, args, body):
-
-        status = "failed"
-        lock.acquire()
-        try:
-            camera = json.loads(body)
-            self.cameras[camera["name"]] = camera
-            status = "ok"
-        finally:
-            lock.release()
-
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.end_headers()
-
-        return json.dumps({
-            "status": status
-        })
+class ApiHandler(HTTPHandler):
 
     def snapshot(self, args):
         self.send_response(200)
         self.send_header('Content-type', 'image/jpeg')
         self.end_headers()
         cam = args[0]
-        if self.cameras and cam in self.cameras:
+        if cam in self.server.state.cameras:
             try:
+                camera = self.server.state.cameras[cam]
                 ctx = zmq.Context()
                 s = ctx.socket(zmq.SUB)
                 s.connect("ipc:///tmp/streamer_%s" % cam)
@@ -87,8 +107,8 @@ class ApiServer(HttpServer):
 
                 msg = s.recv()
                 s.close()
-                A = numpy.frombuffer(msg, dtype=self.cameras[cam]["meta"]["dtype"])
-                frame = A.reshape(self.cameras[cam]["meta"]['shape'])
+                A = numpy.frombuffer(msg, dtype=camera["meta"]["dtype"])
+                frame = A.reshape(camera["meta"]['shape'])
                 del A
                 ret, jpeg = cv2.imencode('.jpg', frame)
                 return jpeg.tobytes()
@@ -107,9 +127,12 @@ class ApiServer(HttpServer):
         direction = args[1]
 
         status = "failed"
-        if "onvif" in self.cameras[cam]:
-            ptz.continuous_move(self.cameras[cam]["onvif"], direction)
-            status = "ok"
+
+        if cam in self.server.state.cameras:
+            camera = self.server.state.cameras[cam]
+            if "onvif" in camera:
+                ptz.continuous_move(camera["onvif"], direction)
+                status = "ok"
 
         return json.dumps({
             "status": status
@@ -121,8 +144,9 @@ class ApiServer(HttpServer):
         self.end_headers()
 
         cameras = []
-        for cam in self.cameras:
-            camera = copy.deepcopy(self.cameras[cam])
+
+        for cam in self.server.state.cameras:
+            camera = copy.deepcopy(self.server.state.cameras[cam])
             del camera["meta"]
             camera["name"] = cam
             camera["snapshot_url"] = "http://%s:%s/snapshot/%s" % (os.environ["API_SERVER_HOST"], os.environ["API_SERVER_PORT"], cam)
@@ -139,28 +163,25 @@ class ApiServer(HttpServer):
         self.send_header('Content-type', 'application/json')
         self.end_headers()
 
-        sy = Sighthound(os.environ["SIGHTHOUND_HOST"], os.environ["SIGHTHOUND_USER"], os.environ["SIGHTHOUND_PASSWORD"])
+        api = Api()
         camera = args[0] if len(args) >= 1 else ""
         rule = args[1] if len(args) >= 2 else ""
-        date = int(args[2]) if len(args) >= 3 else None
+        date = int(args[2]) if len(args) >= 3 else int(time.time())
 
         status = "ok"
         description = ""
         results = []
-        try:
-            clips = sy.get_clips(camera, rule, date)
-            if clips:
-                for ts in clips:
-                    results.append({
-                        "timestamp": ts,
-                        "camera": clips[ts]["camera"],
-                        "thumbnail_url": generate_video_url(clips[ts], "thumbnail"),
-                        "video_url": generate_video_url(clips[ts], "video"),
-                        "objects": clips[ts]["objects"]
-                    })
-        except Exception as e:
-            status = "failed"
-            description = str(e)
+
+        clips = api.get_clips(camera, rule, date)
+        if clips:
+            for clip in clips:
+                results.append({
+                    "timestamp": clip["start_time"],
+                    "camera": clip["camera"],
+                    "thumbnail_url": generate_video_url(clip, "thumbnail"),
+                    "video_url": generate_video_url(clip, "video"),
+                    "objects": clip["objects"]
+                })
 
         return json.dumps({
             "status": status,
@@ -170,75 +191,105 @@ class ApiServer(HttpServer):
 
 
     def video(self, args):
+        api = Api()
+        filepath = api.get_video(args[0], int(args[1]))
+        if filepath == False:
+            self.send_response(404)
+            self.end_headers()
+            return
+
         self.send_response(200)
-
-        sy = Sighthound(os.environ["SIGHTHOUND_HOST"], os.environ["SIGHTHOUND_USER"], os.environ["SIGHTHOUND_PASSWORD"])
-
-        url = sy.get_download_url({
-            "camera": args[0],
-            "first_timestamp": int(args[1]),
-            "first_id": int(args[2]),
-            "second_timestamp": int(args[3]),
-            "second_id": int(args[4]),
-            "object_ids": args[5]
-        })
-
-        request = urllib.request.Request(url)
-        base64string = base64.b64encode(b'%s:%s' % (os.environ["SIGHTHOUND_USER"].encode("utf-8"), os.environ["SIGHTHOUND_PASSWORD"].encode("utf-8")))
-        request.add_header("Authorization", "Basic %s" % base64string.decode("utf-8"))
-        if self.headers.get("Range"):
-            request.add_header("Range", self.headers.get("Range"))
-        handle = urllib.request.urlopen(request, context=ssl._create_unverified_context())
-        headers = dict(handle.headers)
-        for hname in headers:
-            if hname in ["Connection", "Date", "Server"]:
-                continue
-            self.send_header(hname, headers[hname])
-        self.end_headers()
-
-        shutil.copyfileobj(handle, self.wfile)
+        self.send_header('Content-type', 'video/mp4')
+        self.download(filepath)
 
     def thumbnail(self, args):
+        api = Api()
+        filepath = api.get_thumbnail(args[0], int(args[1]))
+        if filepath == False:
+            self.send_response(404)
+            self.end_headers()
+            return
+
         self.send_response(200)
         self.send_header('Content-type', 'image/jpeg')
+        self.download(filepath)
+
+    def download(self, filepath):
+        with open(filepath, 'rb') as handle:
+
+            if 'Range' in self.headers:
+                self.download_range(handle)
+            else:
+                self.send_header('Content-length', os.stat(filepath).st_size)
+                self.end_headers()
+                try:
+                    shutil.copyfileobj(handle, self.wfile)
+                except:
+                    pass
+
+    def download_range(self, handle):
+        start, stop = self.parse_byte_range(self.headers["Range"])
+        fs = os.fstat(handle.fileno())
+        file_len = fs[6]
+        if start >= file_len:
+            return None
+
+        self.send_response(206)
+        self.send_header("Accept-Ranges", "bytes")
+
+        if stop is None or stop >= file_len:
+            stop = file_len - 1
+        response_length = stop - start + 1
+
+        self.send_header("Content-Range", "bytes {}-{}/{}".format(start, stop, file_len))
+        self.send_header("Content-Length", str(response_length))
+        self.send_header("Last-Modified", self.date_time_string(fs.st_mtime))
         self.end_headers()
 
-        sy = Sighthound(os.environ["SIGHTHOUND_HOST"], os.environ["SIGHTHOUND_USER"], os.environ["SIGHTHOUND_PASSWORD"])
+        bufsize = 1024 * 1024
+        handle.seek(start)
+        while True:
+            to_read = min(bufsize, stop + 1 - handle.tell() if stop else bufsize)
+            buf = handle.read(to_read)
+            if not buf:
+                break
 
-        url = sy.get_thumbnail_url({
-            "camera": args[0],
-            "first_timestamp": int(args[1]),
-            "first_id": int(args[2]),
-            "second_timestamp": int(args[3]),
-            "second_id": int(args[4]),
-            "object_ids": args[5]
-        })
+            try:
+                self.wfile.write(buf)
+            except:
+                break
 
-        request = urllib.request.Request(url)
-        base64string = base64.b64encode(b'%s:%s' % (os.environ["SIGHTHOUND_USER"].encode("utf-8"), os.environ["SIGHTHOUND_PASSWORD"].encode("utf-8")))
-        request.add_header("Authorization", "Basic %s" % base64string.decode("utf-8"))
-        shutil.copyfileobj(urllib.request.urlopen(request, context=ssl._create_unverified_context()), self.wfile)
+    def parse_byte_range(self, byte_range):
+
+        if byte_range.strip() == "":
+            return None, None
+
+        m = re.compile(r'bytes=(\d+)-(\d+)?$').match(byte_range)
+        if not m:
+            return None, None
+
+        start, stop = [x and int(x) for x in m.groups()]
+        if stop and stop < start:
+            return None, None
+
+        return start, stop
 
 def generate_video_url(clip, type = ""):
 
-    url = "http://%s:%s/%s/%s/%s/%s/%s/%s/%s" % (
+    url = "http://{}:{}/{}/{}/{}".format(
         os.environ["API_SERVER_HOST"],
         os.environ["API_SERVER_PORT"],
         type,
         clip["camera"],
-        clip["first_timestamp"],
-        clip["first_id"],
-        clip["second_timestamp"],
-        clip["second_id"],
-        clip["object_ids"]
+        clip["start_time"]
         )
 
     return url
 
-def run():
+def run(state):
 
     print("Starting API server")
-    httpd = ThreadingHTTPServer(("", int(os.environ["API_SERVER_PORT"])), ApiServer)
+    httpd = ApiHTTPServer(("", int(os.environ["API_SERVER_PORT"])), ApiHandler, state=state)
 
     try:
         httpd.serve_forever()

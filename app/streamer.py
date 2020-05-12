@@ -11,20 +11,18 @@ from urllib import request
 
 class Streamer(Thread):
     camera = {}
-    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera=None):
+    state = None
+
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera=None, state=None):
         super(Streamer, self).__init__(group=group, target=target, name=name)
         self.camera = camera
+        self.state = state
         self.stop = False
 
-    def send_meta(self):
+    def set_meta(self):
 
-        print("Sending meta information for camera %s" % self.camera["name"])
-
-        params = json.dumps(self.camera).encode("utf8")
-        url = "http://%s:%s/camera" % (os.environ["API_SERVER_HOST"], os.environ["API_SERVER_PORT"])
-        req = request.Request(url, data=params, headers={'content-type': 'application/json'})
-        response = request.urlopen(req)
-        print("Got response: %s" % response.read().decode())
+        print("Put meta information for camera %s to state" % self.camera["name"])
+        self.state.set_camera(self.camera)
 
     def run(self):
         video = self.get_capture(self.camera["url"])
@@ -49,9 +47,12 @@ class Streamer(Thread):
                 continue
 
             if self.camera["meta"]["dtype"] == None:
-                self.camera["meta"]["dtype"]=str(frame.dtype)
-                self.camera["meta"]["shape"]=frame.shape
-                self.send_meta()
+                self.camera["meta"]["dtype"] = str(frame.dtype)
+                self.camera["meta"]["shape"] = frame.shape
+                self.camera["meta"]["width"] = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+                self.camera["meta"]["height"] = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                self.camera["meta"]["fps"] = int(video.get(cv2.CAP_PROP_FPS))
+                self.set_meta()
 
             s.send(frame)
             del frame
@@ -90,11 +91,11 @@ def get_camera():
 
     return cameras.items()
 
-def run():
+def run(state):
 
     threads = []
     for cam, camera in get_camera():
-        thread = Streamer(camera=camera)
+        thread = Streamer(camera=camera, state=state)
         thread.start()
         threads.append(thread)
 
