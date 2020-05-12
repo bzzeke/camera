@@ -69,21 +69,20 @@ class Phase2Detector(Thread):
 
                     if frame["status"] == "done":
                         print("Finish detection for camera {}, time: {}".format(frame["camera"], frame["start_time"]))
+                        print(self.meta[frame["camera"]][frame["start_time"]]["detections"])
 
-                        if len(self.meta[frame["camera"]][frame["start_time"]]["detections"]) > 0:
+                        db_filename = api.db_path(frame["start_time"])
+                        os.makedirs(os.path.dirname(db_filename), exist_ok=True)
+                        db = pickledb.load(db_filename, True, sig=False)
 
-                            db_filename = api.db_path(frame["start_time"])
-                            os.makedirs(os.path.dirname(db_filename), exist_ok=True)
-                            db = pickledb.load(db_filename, True, sig=False)
+                        if not db.exists("clips"):
+                            db.lcreate("clips")
 
-                            if not db.exists("clips"):
-                                db.lcreate("clips")
-
-                            db.ladd("clips", {
-                                "camera": frame["camera"],
-                                "start_time": frame["start_time"],
-                                "objects": list(self.meta[frame["camera"]][frame["start_time"]]["detections"])
-                            })
+                        db.ladd("clips", {
+                            "camera": frame["camera"],
+                            "start_time": frame["start_time"],
+                            "objects": list(self.meta[frame["camera"]][frame["start_time"]]["detections"])
+                        })
 
                         del self.meta[frame["camera"]][frame["start_time"]]
                         print(self.meta)
