@@ -4,30 +4,21 @@ ENV DEBIAN_FRONTEND "noninteractive"
 ENV GST_BRANCH "1.16.2"
 ENV VAAPI_BRANCH "1.16.2"
 ENV DRM_BRANCH "libdrm-2.4.99"
-
-# ENV DIST_DIR "/opt/gstreamer-dist-$GST_BRANCH"
 ENV DIST_DIR "/usr"
 ENV BUILD_DIR "/opt/gstreamer-build"
 ENV PKG_CONFIG_PATH "$DIST_DIR/lib/pkgconfig"
-
-RUN apt update
-# RUN apt install -y python3-opencv
-
-# dev packages
+ENV MODEL_PACKAGE "http://download.tensorflow.org/models/object_detection/faster_rcnn_inception_v2_coco_2018_01_28.tar.gz"
 ENV DEV_PACKAGES "curl cmake gcc g++ clang autoconf automake bison flex autopoint libtool \
 	libglib2.0-dev yasm nasm xutils-dev libpthread-stubs0-dev libpciaccess-dev libudev-dev \
 	libfaac-dev libxrandr-dev libegl1-mesa-dev git-core wget \
 	build-essential gettext libgles2-mesa-dev vim-nox libshout3-dev libsoup2.4-dev \
 	libssl-dev intel-gpu-tools"
 
+RUN apt update
+
 RUN apt install -y --no-install-recommends ${DEV_PACKAGES}
-RUN apt install python3
-# RUN apt-get install -y opencv-data software-properties-common python-software-properties
+RUN apt install libglib2.0-0 python3 python3-pip
 
-WORKDIR /app
-VOLUME /app
-
-# RUN [ ! -d $DIST_DIR ] && mkdir $DIST_DIR
 RUN mkdir $BUILD_DIR
 RUN cd $BUILD_DIR && \
 git clone -b $GST_BRANCH git://anongit.freedesktop.org/git/gstreamer/gstreamer && \
@@ -45,8 +36,8 @@ RUN for prj in gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad gst-p
 do \
     (cd "$BUILD_DIR/$prj" && ./autogen.sh --prefix=$DIST_DIR --disable-gtk-doc --disable-oss4 && make -j 4 && make -j 4 install); \
 done
+RUN rm -fr ${BUILD_DIR}
 
-RUN apt install -y python3-pip
 RUN	pip3 install --no-cache-dir \
 	Cython \
 	numpy \
@@ -95,19 +86,23 @@ RUN	export OPENCV_VERSION=3.4.6 \
 	cd /tmp && \
 	rm -rf ${DIR}
 
-
 # Motion detector
 ADD build/motion_detector /tmp/motion_detector
 RUN cd /tmp/motion_detector && make
 RUN rm -fr /tmp/motion_detector
 
 # Download model
-ENV MODEL_PACKAGE "http://download.tensorflow.org/models/object_detection/faster_rcnn_inception_v2_coco_2018_01_28.tar.gz"
 RUN	mkdir /opt/model && \
 	cd /opt/model && \
 	curl -SL -O ${MODEL_PACKAGE} -o model.tgz && \
 	tar --strip-components=1 -zxf model.tgz && \
 	rm -f model.tgz
 
-# CMD ["bash"]
+# Cleanup
+RUN apt remove -y ${DEV_PACKAGES}
+RUN apt autoremove -y --purge
+
+WORKDIR /app
+VOLUME /app
+
 CMD ["python3", "-u", "/app/main.py"]

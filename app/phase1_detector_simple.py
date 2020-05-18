@@ -118,9 +118,15 @@ class Phase1Detector(Thread):
 
         api = Api()
         filepath =  api.path(self.camera["name"], self.detection_start, "mp4")
-        fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-        # fourcc = cv2.VideoWriter_fourcc('x', '2', '6', '4')
-        self.out = cv2.VideoWriter(filepath, fourcc, self.camera["meta"]["fps"], (self.camera["meta"]["width"], self.camera["meta"]["height"]))
+
+        fourcc = cv2.VideoWriter_fourcc('a', 'v', 'c', '1')
+        if os.environ["CAPTURER_TYPE"] == "gstreamer":
+            encoder = "x264enc" if os.environ["CAPTURER_HARDWARE"] == "cpu" else "vaapih264enc"
+            command = "appsrc ! queue ! videoconvert ! video/x-raw ! {} ! mp4mux ! filesink location={}".format(encoder, filepath)
+        else:
+            command = filepath
+
+        self.out = cv2.VideoWriter(command, fourcc, self.camera["meta"]["fps"], (self.camera["meta"]["width"], self.camera["meta"]["height"]))
 
 
     def finish_detection(self):
