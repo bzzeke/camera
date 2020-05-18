@@ -36,6 +36,7 @@ class Phase2Detector(Thread):
     category_index = None
     meta = {}
     queue = None
+    stop = False
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, queue=None):
         super(Phase2Detector, self).__init__(group=group, target=target, name=name)
@@ -61,9 +62,10 @@ class Phase2Detector(Thread):
     def run(self):
         api = Api()
 
+        print("Starting PHASE2 detector")
         with self.detection_graph.as_default():
             with tf.compat.v1.Session(graph=self.detection_graph) as sess:
-                while True:
+                while not self.stop:
                     frame = self.queue.get()
                     # print("got frame, queue length: {}".format(self.queue.qsize()))
 

@@ -1,4 +1,4 @@
-from on import OnvifCam
+from onvif import Onvif
 from xml.etree import ElementTree
 
 XMAX = 1
@@ -37,7 +37,7 @@ def stop(cam):
     cam.stopMove("true", "true")
 
 def continuous_move(camera, direction):
-    cam = OnvifCam()
+    cam = Onvif()
     cam.setup(camera["host"], camera["port"])
     cam.setAuth(camera["username"], camera["password"])
     cam.setProfileToken(get_profile_token(cam))

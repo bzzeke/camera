@@ -9,12 +9,12 @@ from urllib.parse import urlparse
 from urllib import request
 
 
-class Streamer(Thread):
+class CameraStream(Thread):
     camera = {}
     state = None
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera=None, state=None):
-        super(Streamer, self).__init__(group=group, target=target, name=name)
+        super(CameraStream, self).__init__(group=group, target=target, name=name)
         self.camera = camera
         self.state = state
         self.stop = False
@@ -59,50 +59,63 @@ class Streamer(Thread):
         s.close()
 
     def get_capture(self, url):
-        return cv2.VideoCapture(url)
+        if os.environ["CAPTURER_TYPE"] == "gstreamer":
+            decoder = "avdec_h264" if os.environ["CAPTURER_HARDWARE"] == "cpu" else "vaapidecodebin"
+            return cv2.VideoCapture('rtspsrc location="{}" latency=0 ! rtph264depay ! h264parse ! {} ! videoconvert ! appsink'.format(url, decoder), cv2.CAP_GSTREAMER)
+        else:
+            return cv2.VideoCapture(url)
 
 
-def get_camera():
-    it = 0
-    cameras = {}
-    while "CAM_NAME_%i" % it in os.environ:
-        cameras[os.environ["CAM_NAME_%i" % it]] = {
-            "name": os.environ["CAM_NAME_%i" % it],
-            "url": os.environ["CAM_URL_%i" % it],
-            "meta": {
-                "dtype": None,
-                "shape": None
+class Streamer(Thread):
+    stop = False
+    state = None
+
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, state=None):
+        super(Streamer, self).__init__(group=group, target=target, name=name)
+        self.state = state
+
+    def get_cameras(self):
+        it = 0
+        cameras = {}
+        while "CAM_NAME_%i" % it in os.environ:
+            cameras[os.environ["CAM_NAME_%i" % it]] = {
+                "name": os.environ["CAM_NAME_%i" % it],
+                "url": os.environ["CAM_URL_%i" % it],
+                "meta": {
+                    "dtype": None,
+                    "shape": None
+                }
             }
-        }
 
-        if "CAM_ONVIF_%i" % it in os.environ:
-            parts = urlparse(os.environ["CAM_ONVIF_%i" % it])
-            cameras[os.environ["CAM_NAME_%i" % it]]["onvif"] = {
-                "host": parts.hostname,
-                "port": parts.port,
-                "username": parts.username,
-                "password": parts.password
-            }
+            if "CAM_ONVIF_%i" % it in os.environ:
+                parts = urlparse(os.environ["CAM_ONVIF_%i" % it])
+                cameras[os.environ["CAM_NAME_%i" % it]]["onvif"] = {
+                    "host": parts.hostname,
+                    "port": parts.port,
+                    "username": parts.username,
+                    "password": parts.password
+                }
 
-        if "CAM_PTZ_FEATURES_%i" % it in os.environ:
-            cameras[os.environ["CAM_NAME_%i" % it]]["ptz_features"] = os.environ["CAM_PTZ_FEATURES_%i" % it]
+            if "CAM_PTZ_FEATURES_%i" % it in os.environ:
+                cameras[os.environ["CAM_NAME_%i" % it]]["ptz_features"] = os.environ["CAM_PTZ_FEATURES_%i" % it]
 
-        it += 1
+            it += 1
 
-    return cameras.items()
+        return cameras.items()
 
-def run(state):
+    def run(self):
+        print("Starting streamer service")
+        threads = []
+        for cam, camera in self.get_cameras():
+            thread = CameraStream(camera=camera, state=self.state)
+            thread.start()
+            threads.append(thread)
 
-    threads = []
-    for cam, camera in get_camera():
-        thread = Streamer(camera=camera, state=state)
-        thread.start()
-        threads.append(thread)
+            while not self.stop:
+                time.sleep(1)
 
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        for thread in threads:
-            thread.stop = True
+            for thread in threads:
+                thread.stop = True
+                thread.join()
+
 

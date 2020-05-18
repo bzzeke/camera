@@ -13,6 +13,7 @@ import shutil, ssl, base64
 import re
 from datetime import date
 import pickledb
+from threading import Thread
 
 class Api:
     def get_clips(self, camera, rule, date):
@@ -178,8 +179,8 @@ class ApiHandler(HTTPHandler):
                 results.append({
                     "timestamp": clip["start_time"],
                     "camera": clip["camera"],
-                    "thumbnail_url": generate_video_url(clip, "thumbnail"),
-                    "video_url": generate_video_url(clip, "video"),
+                    "thumbnail_url": self.generate_video_url(clip, "thumbnail"),
+                    "video_url": self.generate_video_url(clip, "video"),
                     "objects": clip["objects"]
                 })
 
@@ -274,25 +275,36 @@ class ApiHandler(HTTPHandler):
 
         return start, stop
 
-def generate_video_url(clip, type = ""):
+    def generate_video_url(self, clip, type = ""):
 
-    url = "http://{}:{}/{}/{}/{}".format(
-        os.environ["API_SERVER_HOST"],
-        os.environ["API_SERVER_PORT"],
-        type,
-        clip["camera"],
-        clip["start_time"]
-        )
+        url = "http://{}:{}/{}/{}/{}".format(
+            os.environ["API_SERVER_HOST"],
+            os.environ["API_SERVER_PORT"],
+            type,
+            clip["camera"],
+            clip["start_time"]
+            )
 
-    return url
+        return url
 
-def run(state):
 
-    print("Starting API server")
-    httpd = ApiHTTPServer(("", int(os.environ["API_SERVER_PORT"])), ApiHandler, state=state)
+class ApiServer(Thread):
+    state = None
+    httpd = None
 
-    try:
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    httpd.server_close()
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, state=None):
+        super(ApiServer,self).__init__(group=group, target=target, name=name)
+        self.state = state
+
+    def run(self):
+        print("Starting API server")
+        self.httpd = ApiHTTPServer(("", int(os.environ["API_SERVER_PORT"])), ApiHandler, state=self.state)
+        try:
+            self.httpd.serve_forever()
+        except KeyboardInterrupt:
+            pass
+
+        self.httpd.server_close()
+
+    def stop(self):
+        self.httpd.shutdown()

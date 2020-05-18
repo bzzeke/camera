@@ -4,7 +4,7 @@ from threading import Thread
 import numpy as np
 import os
 
-from time import time
+import time
 from detectors.phase1 import MotionDetector
 from api import Api
 
@@ -12,6 +12,8 @@ class Phase1Detector(Thread):
     MAX_LENGTH = 30 # seconds
     MAX_SILENCE = 3 # seconds
     RATE = 10 # each N frame
+    MAX_CONTINUES_DETECTIONS = 4
+    DELAY_BETWEEN_DETECTIONS = 300 # seconds
 
     stop = False
     camera = {}
@@ -21,6 +23,7 @@ class Phase1Detector(Thread):
     queue = None
     current_frame_index = 0
     out = None
+    continues_detections_counter = 0
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera=None, queue=None):
         super(Phase1Detector, self).__init__(group=group, target=target, name=name)
@@ -36,6 +39,7 @@ class Phase1Detector(Thread):
         )
 
     def run(self):
+        print("Starting PHASE1 detector")
         ctx = zmq.Context()
         s = ctx.socket(zmq.SUB)
         s.connect("ipc:///tmp/streamer_%s" % self.camera["name"])
@@ -58,10 +62,16 @@ class Phase1Detector(Thread):
             boxes = self.detector.detect(frame)
 
             if self.detection_start == 0 and len(boxes) > 0:
+                if self.continues_detections_counter > self.MAX_CONTINUES_DETECTIONS:
+                    print("Too much continues movement, sleeping for {} seconds".format(self.MAX_LENGTH))
+                    time.sleep(self.MAX_LENGTH)
+                    continue
+
                 print("Start phase 1 detection")
                 self.start_detection()
 
             if self.detection_start > 0:
+
                 if self.current_frame_index % self.RATE == 0:
                     print("Sending frame: %s" % self.current_frame_index)
                     self.queue.put({
@@ -74,17 +84,19 @@ class Phase1Detector(Thread):
                 self.out.write(frame)
                 self.current_frame_index += 1
 
-                if time() - self.detection_start > self.MAX_LENGTH:
+                if time.time() - self.detection_start > self.MAX_LENGTH:
                     print("Finished phase 1: max length reached")
+                    self.continues_detections_counter += 1
                     self.finish_detection()
                 else:
                     if len(boxes) == 0:
                         if self.silence_start > 0:
-                            if time() - self.silence_start > self.MAX_SILENCE:
+                            if time.time() - self.silence_start > self.MAX_SILENCE:
                                 print("Finished phase 1: silence length reached")
+                                self.continues_detections_counter = 0
                                 self.finish_detection()
                         else:
-                            self.silence_start = int(time())
+                            self.silence_start = int(time.time())
                     else:
                         self.silence_start = 0
 
@@ -93,7 +105,7 @@ class Phase1Detector(Thread):
         s.close()
 
     def start_detection(self):
-        self.detection_start = int(time())
+        self.detection_start = int(time.time())
         self.current_frame_index = 0
         self.queue.put({
             "camera": self.camera["name"],
@@ -107,7 +119,7 @@ class Phase1Detector(Thread):
         api = Api()
         filepath =  api.path(self.camera["name"], self.detection_start, "mp4")
         fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-        # fourcc = cv2.VideoWriter_fourcc('a', 'v', 'c', '1')
+        # fourcc = cv2.VideoWriter_fourcc('x', '2', '6', '4')
         self.out = cv2.VideoWriter(filepath, fourcc, self.camera["meta"]["fps"], (self.camera["meta"]["width"], self.camera["meta"]["height"]))
 
 
