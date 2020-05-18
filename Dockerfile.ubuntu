@@ -1,0 +1,113 @@
+FROM ubuntu:20.04
+
+ENV DEBIAN_FRONTEND "noninteractive"
+ENV GST_BRANCH "1.16.2"
+ENV VAAPI_BRANCH "1.16.2"
+ENV DRM_BRANCH "libdrm-2.4.99"
+
+# ENV DIST_DIR "/opt/gstreamer-dist-$GST_BRANCH"
+ENV DIST_DIR "/usr"
+ENV BUILD_DIR "/opt/gstreamer-build"
+ENV PKG_CONFIG_PATH "$DIST_DIR/lib/pkgconfig"
+
+RUN apt update
+# RUN apt install -y python3-opencv
+
+# dev packages
+ENV DEV_PACKAGES "curl cmake gcc g++ clang autoconf automake bison flex autopoint libtool \
+	libglib2.0-dev yasm nasm xutils-dev libpthread-stubs0-dev libpciaccess-dev libudev-dev \
+	libfaac-dev libxrandr-dev libegl1-mesa-dev git-core wget \
+	build-essential gettext libgles2-mesa-dev vim-nox libshout3-dev libsoup2.4-dev \
+	libssl-dev intel-gpu-tools"
+
+RUN apt install -y --no-install-recommends ${DEV_PACKAGES}
+RUN apt install python3
+# RUN apt-get install -y opencv-data software-properties-common python-software-properties
+
+WORKDIR /app
+VOLUME /app
+
+# RUN [ ! -d $DIST_DIR ] && mkdir $DIST_DIR
+RUN mkdir $BUILD_DIR
+RUN cd $BUILD_DIR && \
+git clone -b $GST_BRANCH git://anongit.freedesktop.org/git/gstreamer/gstreamer && \
+git clone -b $GST_BRANCH git://anongit.freedesktop.org/git/gstreamer/gst-plugins-base && \
+git clone -b $GST_BRANCH git://anongit.freedesktop.org/git/gstreamer/gst-plugins-good && \
+git clone -b $GST_BRANCH git://anongit.freedesktop.org/git/gstreamer/gst-plugins-bad && \
+git clone -b $GST_BRANCH git://anongit.freedesktop.org/git/gstreamer/gst-plugins-ugly && \
+git clone -b $GST_BRANCH git://anongit.freedesktop.org/git/gstreamer/gst-libav && \
+git clone -b $VAAPI_BRANCH https://anongit.freedesktop.org/git/gstreamer/gstreamer-vaapi.git && \
+git clone -b $DRM_BRANCH http://anongit.freedesktop.org/git/mesa/drm.git && \
+git clone https://github.com/intel/libva && \
+git clone https://github.com/01org/intel-vaapi-driver
+
+RUN for prj in gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly gst-libav drm libva intel-driver gstreamer-vaapi; \
+do \
+    (cd "$BUILD_DIR/$prj" && ./autogen.sh --prefix=$DIST_DIR --disable-gtk-doc --disable-oss4 && make -j 4 && make -j 4 install); \
+done
+
+RUN apt install -y python3-pip
+RUN	pip3 install --no-cache-dir \
+	Cython \
+	numpy \
+	Pillow \
+	av \
+	pyzmq \
+	pickledb
+
+RUN	pip3 install --no-cache-dir	matplotlib
+RUN	pip3 install --no-cache-dir numba
+RUN pip3 install --no-cache-dir tensorflow
+
+## OpenCV
+RUN	export OPENCV_VERSION=3.4.6 \
+	export PYTHON_VERSION=`python3 -c 'import platform; print(".".join(platform.python_version_tuple()[:2]))'` \
+	export CC=/usr/bin/clang \
+	export CXX=/usr/bin/clang++ && \
+	# Contrib
+	CONTRIB_DIR=$(mktemp -d) && cd ${CONTRIB_DIR} && \
+	curl -SL -O https://github.com/opencv/opencv_contrib/archive/${OPENCV_VERSION}.tar.gz && \
+	tar xzvf ${OPENCV_VERSION}.tar.gz && \
+	DIR=$(mktemp -d) && cd ${DIR} && \
+	curl -SL -O https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.tar.gz && \
+	tar xzvf ${OPENCV_VERSION}.tar.gz && \
+	cd opencv-${OPENCV_VERSION} && \
+	sed -i "s/av_log_set_level(AV_LOG_ERROR);/av_log_set_level(AV_LOG_QUIET);/g" modules/videoio/src/cap_ffmpeg_impl.hpp && \
+	mkdir build && \
+	cd build && \
+	cmake \
+		-D WITH_GSTREAMER=ON \
+		-D WITH_FFMPEG=ON \
+	    -D OPENCV_EXTRA_MODULES_PATH=${CONTRIB_DIR}/opencv_contrib-${OPENCV_VERSION}/modules \
+		-D CMAKE_BUILD_TYPE=RELEASE \
+		-D INSTALL_C_EXAMPLES=OFF \
+		-D INSTALL_PYTHON_EXAMPLES=OFF \
+		-D CMAKE_INSTALL_PREFIX=/usr/local \
+		-D BUILD_EXAMPLES=OFF \
+		-D BUILD_opencv_python3=ON \
+		-D PYTHON_DEFAULT_EXECUTABLE=/usr/bin/python3 \
+		-D PYTHON_INCLUDE_DIRS=/usr/include/python${PYTHON_VERSION}m \
+		-D PYTHON_EXECUTABLE=/usr/bin/python${PYTHON_VERSION} \
+		-D PYTHON_LIBRARY=/usr/lib/libpython${PYTHON_VERSION}m.so \
+		.. && \
+	make -j8 && \
+	make install && \
+	cd /tmp && \
+	rm -rf ${DIR}
+
+
+# Motion detector
+ADD build/motion_detector /tmp/motion_detector
+RUN cd /tmp/motion_detector && make
+RUN rm -fr /tmp/motion_detector
+
+# Download model
+ENV MODEL_PACKAGE "http://download.tensorflow.org/models/object_detection/faster_rcnn_inception_v2_coco_2018_01_28.tar.gz"
+RUN	mkdir /opt/model && \
+	cd /opt/model && \
+	curl -SL -O ${MODEL_PACKAGE} -o model.tgz && \
+	tar --strip-components=1 -zxf model.tgz && \
+	rm -f model.tgz
+
+# CMD ["bash"]
+CMD ["python3", "-u", "/app/main.py"]

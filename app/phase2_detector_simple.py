@@ -26,8 +26,8 @@ from detectors.object_detection.utils import visualization_utils as vis_util
 
 class Phase2Detector(Thread):
 
-    PATH_TO_MODEL = 'detectors/models/rcnn/frozen_inference_graph.pb'
-    PATH_TO_LABELS = 'detectors/object_detection/data/mscoco_label_map.pbtxt'
+    PATH_TO_MODEL = ""
+    PATH_TO_LABELS = "detectors/object_detection/data/mscoco_label_map.pbtxt"
     NUM_CLASSES = 90
     DETECTION_CATEGORIES = ["person", "car", "truck", "bus", "motorcycle", "bicycle"]
     RATE = 10
@@ -40,6 +40,7 @@ class Phase2Detector(Thread):
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, queue=None):
         super(Phase2Detector, self).__init__(group=group, target=target, name=name)
+        self.PATH_TO_MODEL = os.environ["MODEL_PATH"]
         self.queue = queue
 
         self.init_detection_graph()
