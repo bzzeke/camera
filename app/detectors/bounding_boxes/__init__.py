@@ -4,7 +4,8 @@ from os import path
 import numpy as np
 
 my_path = path.abspath(path.dirname(__file__))
-path = path.join(my_path, "./bin/libmotion_detector_optimization.so")
+# path = path.join(my_path, "./bin/libmotion_detector_optimization.so")
+path = "libmotion_detector_optimization.so"
 
 try:
     lib = PyDLL(path)
