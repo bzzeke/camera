@@ -94,7 +94,7 @@ RUN rm -fr /tmp/motion_detector
 # Download model
 RUN	mkdir /opt/model && \
 	cd /opt/model && \
-	curl -SL -O ${MODEL_PACKAGE} -o model.tgz && \
+	curl -SL -o model.tgz -O ${MODEL_PACKAGE} && \
 	tar --strip-components=1 -zxf model.tgz && \
 	rm -f model.tgz
 
