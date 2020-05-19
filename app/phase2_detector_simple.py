@@ -63,7 +63,7 @@ class Phase2Detector(Thread):
     def run(self):
         api = Api()
 
-        print("Starting PHASE2 detector")
+        print("[phase2] Starting detector")
         with self.detection_graph.as_default():
             with tf.compat.v1.Session(graph=self.detection_graph) as sess:
                 while not self.stop:
@@ -71,8 +71,7 @@ class Phase2Detector(Thread):
                     # print("got frame, queue length: {}".format(self.queue.qsize()))
 
                     if frame["status"] == "done":
-                        print("Finish detection for camera {}, time: {}".format(frame["camera"], frame["start_time"]))
-                        print(self.meta[frame["camera"]][frame["start_time"]]["detections"])
+                        print("[phase2] [{}] Finished, timestamp: {}, detections: {}".format(frame["camera"], frame["start_time"], ", ".join(self.meta[frame["camera"]][frame["start_time"]]["detections"])))
 
                         db_filename = api.db_path(frame["start_time"])
                         os.makedirs(os.path.dirname(db_filename), exist_ok=True)
@@ -88,10 +87,9 @@ class Phase2Detector(Thread):
                         })
 
                         del self.meta[frame["camera"]][frame["start_time"]]
-                        print(self.meta)
                         continue
                     elif frame["status"] == "start":
-                        print("Start detection for camera {}, time: {}".format(frame["camera"], frame["start_time"]))
+                        print("[phase2] [{}] Start detection, timestamp: {}".format(frame["camera"], frame["start_time"]))
 
                         if frame["camera"] not in self.meta:
                             self.meta[frame["camera"]] = {}
@@ -121,7 +119,7 @@ class Phase2Detector(Thread):
                         [boxes, scores, classes, num_detections],
                         feed_dict={image_tensor: image_np_expanded}
                     )
-                    print("Frame processed for: %s" % (time.time() - s))
+                    print("[phase2] [{}] Frame processed for: {} seconds".format(frame["camera"], (time.time() - s))
 
                     boxes = np.squeeze(boxes)
                     classes = np.squeeze(classes).astype(np.int32)

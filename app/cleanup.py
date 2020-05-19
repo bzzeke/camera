@@ -20,7 +20,7 @@ class Cleanup(Thread):
 
 
     def run(self):
-        print("Starting cleanup service")
+        print("[cleanup] Starting service")
         last_check = 0
         while not self.stop:
             if time.time() - last_check >= self.period:

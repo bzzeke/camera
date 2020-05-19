@@ -115,7 +115,7 @@ class ApiHandler(HTTPHandler):
                 return jpeg.tobytes()
 
             except Exception as e:
-                print("Failed to get image from stream")
+                print("[api] Failed to get image from stream")
                 print(str(e))
 
 
@@ -297,7 +297,7 @@ class ApiServer(Thread):
         self.state = state
 
     def run(self):
-        print("Starting API server")
+        print("[api] Starting service")
         self.httpd = ApiHTTPServer(("", int(os.environ["API_SERVER_PORT"])), ApiHandler, state=self.state)
         try:
             self.httpd.serve_forever()

@@ -21,13 +21,13 @@ class CameraStream(Thread):
 
     def set_meta(self):
 
-        print("Put meta information for camera %s to state" % self.camera["name"])
+        print("[streamer] [{}] Save meta information".format(self.camera["name"]))
         self.state.set_camera(self.camera)
 
     def run(self):
         video = self.get_capture(self.camera["url"])
 
-        print("Starting stream for camera %s" % self.camera["name"])
+        print("[streamer] [{}] Starting stream".format(self.camera["name"]))
 
         ctx = zmq.Context()
         s = ctx.socket(zmq.PUB)
@@ -40,7 +40,7 @@ class CameraStream(Thread):
             (grabbed, frame) = video.read()
 
             if not grabbed:
-                print("Reconnecting to camera %s" % self.camera["name"])
+                print("[streamer] [{}] Reconnecting to camera".format(self.camera["name"]))
                 video.release()
                 video = self.get_capture(self.camera["url"])
                 time.sleep(5)
@@ -105,7 +105,7 @@ class Streamer(Thread):
         return cameras.items()
 
     def run(self):
-        print("Starting streamer service")
+        print("[streamer] Starting service")
         threads = []
         for cam, camera in self.get_cameras():
             thread = CameraStream(camera=camera, state=self.state)

@@ -37,7 +37,7 @@ class Phase1Detector(Thread):
         )
 
     def run(self):
-        print("Starting PHASE1 detector")
+        print("[phase1] [{}] Starting detector".format(self.camera["name"]))
         ctx = zmq.Context()
         s = ctx.socket(zmq.SUB)
         s.connect("ipc:///tmp/streamer_%s" % self.camera["name"])
@@ -49,7 +49,7 @@ class Phase1Detector(Thread):
                 msg = s.recv()
             except:
                 if self.detection_start > 0:
-                    print("Finished phase 1: reader timeout")
+                    print("[phase1] [{}] Finished: reader timeout".format(self.camera["name"]))
                     self.finish_detection()
                 continue
 
@@ -60,13 +60,13 @@ class Phase1Detector(Thread):
             boxes = self.detector.detect(frame)
 
             if self.detection_start == 0 and len(boxes) > 0:
-                print("Start phase 1 detection")
+                print("[phase1] [{}] Start phase 1 detection")
                 self.start_detection()
 
             if self.detection_start > 0:
 
                 if self.current_frame_index % self.RATE == 0:
-                    print("Sending frame: %s" % self.current_frame_index)
+                    print("[phase1] [{}] Sending frame: {}".format(self.camera["name"], self.current_frame_index))
                     self.queue.put({
                         "camera": self.camera["name"],
                         "start_time": self.detection_start,
@@ -78,14 +78,14 @@ class Phase1Detector(Thread):
                 self.current_frame_index += 1
 
                 if time.time() - self.detection_start > self.MAX_LENGTH:
-                    print("Finished phase 1: max length reached")
+                    print("[phase1] [{}] Finished: max length".format(self.camera["name"]))
                     self.continues_detections_counter += 1
                     self.finish_detection()
                 else:
                     if len(boxes) == 0:
                         if self.silence_start > 0:
                             if time.time() - self.silence_start > self.MAX_SILENCE:
-                                print("Finished phase 1: silence length reached")
+                                print("[phase1] [{}] Finished: silence length".format(self.camera["name"]))
                                 self.continues_detections_counter = 0
                                 self.finish_detection()
                         else:
