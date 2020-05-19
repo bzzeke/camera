@@ -33,9 +33,10 @@ class State():
         try:
             self.cameras[camera["name"]] = camera
 
-            phase1 = Phase1Detector(camera=camera, queue=self.q)
-            phase1.start()
-            self.threads.append(phase1)
+            if camera["detection"]:
+                phase1 = Phase1Detector(camera=camera, queue=self.q)
+                phase1.start()
+                self.threads.append(phase1)
 
         finally:
             self.lock.release()

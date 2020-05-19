@@ -81,6 +81,7 @@ class Streamer(Thread):
             cameras[os.environ["CAM_NAME_%i" % it]] = {
                 "name": os.environ["CAM_NAME_%i" % it],
                 "url": os.environ["CAM_URL_%i" % it],
+                "detection": "CAM_DETECTION_%i" % it in os.environ,
                 "meta": {
                     "dtype": None,
                     "shape": None
