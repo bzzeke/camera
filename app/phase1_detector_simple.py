@@ -21,7 +21,6 @@ class Phase1Detector(Thread):
     queue = None
     current_frame_index = 0
     out = None
-    continues_detections_counter = 0
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera=None, queue=None):
         super(Phase1Detector, self).__init__(group=group, target=target, name=name)
@@ -60,7 +59,7 @@ class Phase1Detector(Thread):
             boxes = self.detector.detect(frame)
 
             if self.detection_start == 0 and len(boxes) > 0:
-                print("[phase1] [{}] Start phase 1 detection")
+                print("[phase1] [{}] Start detection".format(self.camera["name"]))
                 self.start_detection()
 
             if self.detection_start > 0:
@@ -79,14 +78,12 @@ class Phase1Detector(Thread):
 
                 if time.time() - self.detection_start > self.MAX_LENGTH:
                     print("[phase1] [{}] Finished: max length".format(self.camera["name"]))
-                    self.continues_detections_counter += 1
                     self.finish_detection()
                 else:
                     if len(boxes) == 0:
                         if self.silence_start > 0:
                             if time.time() - self.silence_start > self.MAX_SILENCE:
                                 print("[phase1] [{}] Finished: silence length".format(self.camera["name"]))
-                                self.continues_detections_counter = 0
                                 self.finish_detection()
                         else:
                             self.silence_start = int(time.time())
