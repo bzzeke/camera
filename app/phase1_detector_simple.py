@@ -12,8 +12,6 @@ class Phase1Detector(Thread):
     MAX_LENGTH = 30 # seconds
     MAX_SILENCE = 3 # seconds
     RATE = 10 # each N frame
-    MAX_CONTINUES_DETECTIONS = 4
-    DELAY_BETWEEN_DETECTIONS = 300 # seconds
 
     stop = False
     camera = {}
@@ -31,8 +29,8 @@ class Phase1Detector(Thread):
         self.queue = queue
         self.stop = False
         self.detector = MotionDetector(
-            bg_history=20,
-            brightness_discard_level=25,
+            bg_history=10,
+            brightness_discard_level=50,
             bg_subs_scale_percent=0.1,
             group_boxes=True,
             expansion_step=5
@@ -62,11 +60,6 @@ class Phase1Detector(Thread):
             boxes = self.detector.detect(frame)
 
             if self.detection_start == 0 and len(boxes) > 0:
-                if self.continues_detections_counter > self.MAX_CONTINUES_DETECTIONS:
-                    print("Too much continues movement, sleeping for {} seconds".format(self.MAX_LENGTH))
-                    time.sleep(self.MAX_LENGTH)
-                    continue
-
                 print("Start phase 1 detection")
                 self.start_detection()
 
