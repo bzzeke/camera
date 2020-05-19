@@ -112,11 +112,11 @@ class Streamer(Thread):
             thread.start()
             threads.append(thread)
 
-            while not self.stop:
-                time.sleep(1)
+        while not self.stop:
+            time.sleep(1)
 
-            for thread in threads:
-                thread.stop = True
-                thread.join()
+        for thread in threads:
+            thread.stop = True
+            thread.join()
 
 
