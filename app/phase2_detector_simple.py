@@ -119,7 +119,7 @@ class Phase2Detector(Thread):
                         [boxes, scores, classes, num_detections],
                         feed_dict={image_tensor: image_np_expanded}
                     )
-                    print("[phase2] [{}] Frame processed for: {} seconds".format(frame["camera"], (time.time() - s))
+                    print("[phase2] [{}] Frame processed for: {} seconds".format(frame["camera"], (time.time() - s)))
 
                     boxes = np.squeeze(boxes)
                     classes = np.squeeze(classes).astype(np.int32)
