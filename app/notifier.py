@@ -6,6 +6,9 @@ import os
 class Notifier():
     def notify(self, message, attachments = []):
 
+        if "CAMERA_DISABLE_NOTIFICATIONS" in os.environ:
+            return
+
         msg = EmailMessage()
         msg.set_content(message)
         msg["Subject"] = "Alert"
