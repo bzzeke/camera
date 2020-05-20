@@ -12,10 +12,12 @@ from PIL import Image
 import cv2
 import pickledb
 import time
+import queue
 from shutil import move
 from datetime import date
 from api import Api
 from notifier import Notifier
+
 
 sys.path.append("detectors")
 
@@ -67,24 +69,33 @@ class Phase2Detector(Thread):
         with self.detection_graph.as_default():
             with tf.compat.v1.Session(graph=self.detection_graph) as sess:
                 while not self.stop:
-                    frame = self.queue.get()
+                    try:
+                        frame = self.queue.get(block=False)
+                    except queue.Empty:
+                        time.sleep(0.1)
+                        continue
+
                     print("[phase2] Got frame, queue length: {}".format(self.queue.qsize()))
 
                     if frame["status"] == "done":
-                        print("[phase2] [{}] Finished, timestamp: {}, detections: {}".format(frame["camera"], frame["start_time"], ", ".join(self.meta[frame["camera"]][frame["start_time"]]["detections"])))
+                        if len(self.meta[frame["camera"]][frame["start_time"]]["detections"]) > 0:
+                            print("[phase2] [{}] Finished, timestamp: {}, detections: {}".format(frame["camera"], frame["start_time"], ", ".join(self.meta[frame["camera"]][frame["start_time"]]["detections"])))
+                            db_filename = api.db_path(frame["start_time"])
+                            os.makedirs(os.path.dirname(db_filename), exist_ok=True)
+                            db = pickledb.load(db_filename, True, sig=False)
 
-                        db_filename = api.db_path(frame["start_time"])
-                        os.makedirs(os.path.dirname(db_filename), exist_ok=True)
-                        db = pickledb.load(db_filename, True, sig=False)
+                            if not db.exists("clips"):
+                                db.lcreate("clips")
 
-                        if not db.exists("clips"):
-                            db.lcreate("clips")
-
-                        db.ladd("clips", {
-                            "camera": frame["camera"],
-                            "start_time": frame["start_time"],
-                            "objects": list(self.meta[frame["camera"]][frame["start_time"]]["detections"])
-                        })
+                            db.ladd("clips", {
+                                "camera": frame["camera"],
+                                "start_time": frame["start_time"],
+                                "objects": list(self.meta[frame["camera"]][frame["start_time"]]["detections"])
+                            })
+                        else:
+                            print("[phase2] [{}] Finished, timestamp: {}, no detections, removing clip".format(frame["camera"], frame["start_time"]))
+                            clip_filename = api.path(frame["camera"], frame["start_time"], "mp4")
+                            os.remove(clip_filename)
 
                         del self.meta[frame["camera"]][frame["start_time"]]
                         continue
