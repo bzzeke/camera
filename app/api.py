@@ -21,9 +21,9 @@ class Api:
         if os.path.isfile(filepath):
             db = pickledb.load(filepath, True, sig=False)
             clips = db.lgetall("clips")
-            if camera != "-":
+            if camera != "":
                 clips = list(filter(lambda item: item["camera"] == camera, clips))
-            if rule != "-":
+            if rule != "":
                 clips = list(filter(lambda item: rule in item["objects"], clips))
 
             return sorted(clips, key = lambda item: item["start_time"], reverse=True)
@@ -168,9 +168,14 @@ class ApiHandler(HTTPHandler):
         # format: /clips_list
         # format: /clips_list/-/-/182234644
         # format: /clips_list/-/person
-        camera = args[0] if len(args) >= 1 else "-"
-        rule = args[1] if len(args) >= 2 else "-"
+        camera = args[0] if len(args) >= 1 else ""
+        rule = args[1] if len(args) >= 2 else ""
         date = int(args[2]) if len(args) >= 3 else int(time.time())
+
+        if camera == "Any camera":
+            camera = ""
+        if rule == "All objects":
+            rule = ""
 
         status = "ok"
         description = ""
