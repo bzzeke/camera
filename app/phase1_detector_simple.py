@@ -108,13 +108,15 @@ class Phase1Detector(Thread):
 
         api = Api()
         filepath =  api.path(self.camera["name"], self.detection_start, "mp4")
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
         fourcc = cv2.VideoWriter_fourcc('a', 'v', 'c', '1')
         if os.environ["CAPTURER_TYPE"] == "gstreamer":
             encoder = "x264enc" if os.environ["CAPTURER_HARDWARE"] == "cpu" else "vaapih264enc"
-            command = "appsrc ! queue ! videoconvert ! video/x-raw ! {} ! mp4mux ! filesink location={}".format(encoder, filepath)
+            command = "appsrc ! queue ! videoconvert ! video/x-raw ! {} ! video/x-h264,profile=baseline ! mp4mux ! filesink location={}".format(encoder, filepath)
         else:
             command = filepath
+
 
         self.out = cv2.VideoWriter(command, fourcc, self.camera["meta"]["fps"], (self.camera["meta"]["width"], self.camera["meta"]["height"]))
 
