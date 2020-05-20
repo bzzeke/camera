@@ -12,7 +12,7 @@ ENV DEV_PACKAGES "curl cmake gcc g++ clang autoconf automake bison flex autopoin
 	libglib2.0-dev yasm nasm xutils-dev libpthread-stubs0-dev libpciaccess-dev libudev-dev \
 	libfaac-dev libxrandr-dev libegl1-mesa-dev git-core wget \
 	build-essential gettext libgles2-mesa-dev vim-nox libshout3-dev libsoup2.4-dev \
-	libssl-dev intel-gpu-tools"
+	libssl-dev intel-gpu-tools libx264-dev"
 
 RUN apt update
 
@@ -32,7 +32,7 @@ git clone -b $DRM_BRANCH http://anongit.freedesktop.org/git/mesa/drm.git && \
 git clone https://github.com/intel/libva && \
 git clone https://github.com/01org/intel-vaapi-driver
 
-RUN for prj in gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly gst-libav drm libva intel-driver gstreamer-vaapi; \
+RUN for prj in gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly gst-libav drm libva intel-vaapi-driver gstreamer-vaapi; \
 do \
     (cd "$BUILD_DIR/$prj" && ./autogen.sh --prefix=$DIST_DIR --disable-gtk-doc --disable-oss4 && make -j 4 && make -j 4 install); \
 done
@@ -100,7 +100,7 @@ RUN	mkdir /opt/model && \
 
 # Cleanup
 RUN apt remove -y ${DEV_PACKAGES}
-RUN apt autoremove -y --purge
+# RUN apt autoremove -y --purge
 
 WORKDIR /app
 VOLUME /app
