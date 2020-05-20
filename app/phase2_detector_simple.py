@@ -68,7 +68,7 @@ class Phase2Detector(Thread):
             with tf.compat.v1.Session(graph=self.detection_graph) as sess:
                 while not self.stop:
                     frame = self.queue.get()
-                    # print("got frame, queue length: {}".format(self.queue.qsize()))
+                    print("[phase2] Got frame, queue length: {}".format(self.queue.qsize()))
 
                     if frame["status"] == "done":
                         print("[phase2] [{}] Finished, timestamp: {}, detections: {}".format(frame["camera"], frame["start_time"], ", ".join(self.meta[frame["camera"]][frame["start_time"]]["detections"])))
@@ -125,25 +125,26 @@ class Phase2Detector(Thread):
                     classes = np.squeeze(classes).astype(np.int32)
                     scores = np.squeeze(scores)
 
-                    matched_boxes = False
-                    for i in range(boxes.shape[0]):
-                        if scores[i] > 0.5 and classes[i] in self.category_index.keys() and self.category_index[classes[i]]['name'] in self.DETECTION_CATEGORIES:
-                            self.meta[frame["camera"]][frame["start_time"]]["detections"].add(self.category_index[classes[i]]['name'])
-                            matched_boxes = True
-                        # else:
-                            # del boxes[i], classes[i], scores[i]
+                    (boxes, scores, classes) = self.filter_boxes(0.5, boxes, scores, classes, self.DETECTION_CATEGORIES)
 
-                    if matched_boxes == True and self.meta[frame["camera"]][frame["start_time"]]["snapshot"] == False:
-                        frame_img = vis_util.visualize_boxes_and_labels_on_image_array(
-                            np.array(frame_img),
-                            boxes,
-                            classes,
-                            scores,
-                            self.category_index,
-                            use_normalized_coordinates=True,
-                            line_thickness=3)
+                    if len(boxes):
 
-                        self.save_snapshot(frame_img, frame, api)
+
+                        for i in range(classes.shape[0]):
+                            if classes[i] in self.category_index.keys():
+                                self.meta[frame["camera"]][frame["start_time"]]["detections"].add(self.category_index[classes[i]]['name'])
+
+                        if self.meta[frame["camera"]][frame["start_time"]]["snapshot"] == False:
+                            frame_img = vis_util.visualize_boxes_and_labels_on_image_array(
+                                np.array(frame_img),
+                                boxes,
+                                classes,
+                                scores,
+                                self.category_index,
+                                use_normalized_coordinates=True,
+                                line_thickness=3)
+
+                            self.save_snapshot(frame_img, frame, api)
 
     def save_snapshot(self, frame_img, frame, api):
         snapshot_filename = api.path(frame["camera"], frame["start_time"], "jpeg")
@@ -154,3 +155,16 @@ class Phase2Detector(Thread):
         notifier.notify("Motion detected on camera {}".format(frame["camera"]), [snapshot_filename])
 
         self.meta[frame["camera"]][frame["start_time"]]["snapshot"] = True
+
+    def filter_boxes(self, min_score, boxes, scores, classes, categories):
+        n = len(classes)
+        idxs = []
+
+        for i in range(n):
+            if self.category_index[classes[i]]['name'] in categories and scores[i] >= min_score:
+                idxs.append(i)
+
+        filtered_boxes = boxes[idxs, ...]
+        filtered_scores = scores[idxs, ...]
+        filtered_classes = classes[idxs, ...]
+        return filtered_boxes, filtered_scores, filtered_classes
