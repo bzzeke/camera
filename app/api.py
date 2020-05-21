@@ -14,6 +14,7 @@ import re
 from datetime import date
 import pickledb
 from threading import Thread
+from util import log
 
 class Api:
     def get_clips(self, camera, rule, date):
@@ -115,8 +116,7 @@ class ApiHandler(HTTPHandler):
                 return jpeg.tobytes()
 
             except Exception as e:
-                print("[api] Failed to get image from stream")
-                print(str(e))
+                log("[api] Failed to get image from stream: {}".format(str(e)))
 
 
     def ptz(self, args, body):
@@ -305,7 +305,7 @@ class ApiServer(Thread):
         self.state = state
 
     def run(self):
-        print("[api] Starting service")
+        log("[api] Starting service")
         self.httpd = ApiHTTPServer(("", int(os.environ["API_SERVER_PORT"])), ApiHandler, state=self.state)
         try:
             self.httpd.serve_forever()

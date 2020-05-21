@@ -1,5 +1,6 @@
 from onvif import Onvif
 from xml.etree import ElementTree
+from util import log
 
 XMAX = 1
 XMIN = -1
@@ -9,31 +10,31 @@ ZMIN = -1
 ZMAX = 1
 
 def zoom_in(cam):
-    print("zoom in...")
+    log("[ptz] zoom in...")
     cam.continuousZoom(ZMAX)
 
 def zoom_out(cam):
-    print("zoom out...")
+    log("[ptz] zoom out...")
     cam.continuousZoom(ZMIN)
 
 def move_up(cam):
-    print("move up...")
+    log("[ptz] move up...")
     cam.continuousMove(0, YMAX)
 
 def move_down(cam):
-    print("move down...")
+    log("[ptz] move down...")
     cam.continuousMove(0, YMIN)
 
 def move_right(cam):
-    print("move right...")
+    log("[ptz] move right...")
     cam.continuousMove(XMAX, 0)
 
 def move_left(cam):
-    print("move left...")
+    log("[ptz] move left...")
     cam.continuousMove(XMIN, 0)
 
 def stop(cam):
-    print("stop camera...")
+    log("[ptz] stop camera...")
     cam.stopMove("true", "true")
 
 def continuous_move(camera, direction):

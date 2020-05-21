@@ -5,6 +5,7 @@ import numpy as np
 import os
 
 import time
+from util import log
 from detectors.phase1 import MotionDetector
 
 def clip_path(camera, timestamp):
@@ -38,7 +39,7 @@ class Phase1Detector(Thread):
         )
 
     def run(self):
-        print("[phase1] [{}] Starting detector".format(self.camera["name"]))
+        log("[phase1] [{}] Starting detector".format(self.camera["name"]))
         ctx = zmq.Context()
         s = ctx.socket(zmq.SUB)
         s.connect("ipc:///tmp/streamer_%s" % self.camera["name"])
@@ -50,7 +51,7 @@ class Phase1Detector(Thread):
                 msg = s.recv()
             except:
                 if self.detection_start > 0:
-                    print("[phase1] [{}] Finished: reader timeout".format(self.camera["name"]))
+                    log("[phase1] [{}] Finished: reader timeout".format(self.camera["name"]))
                     self.finish_detection()
                 continue
 
@@ -61,7 +62,7 @@ class Phase1Detector(Thread):
             boxes = self.detector.detect(frame)
 
             if self.detection_start == 0 and len(boxes) > 0:
-                print("[phase1] [{}] Start detection".format(self.camera["name"]))
+                log("[phase1] [{}] Start detection".format(self.camera["name"]))
                 self.start_detection()
 
             if self.detection_start > 0:
@@ -78,13 +79,13 @@ class Phase1Detector(Thread):
                 self.current_frame_index += 1
 
                 if time.time() - self.detection_start > self.MAX_LENGTH:
-                    print("[phase1] [{}] Finished: max length".format(self.camera["name"]))
+                    log("[phase1] [{}] Finished: max length".format(self.camera["name"]))
                     self.finish_detection()
                 else:
                     if len(boxes) == 0:
                         if self.silence_start > 0:
                             if time.time() - self.silence_start > self.MAX_SILENCE:
-                                print("[phase1] [{}] Finished: silence length".format(self.camera["name"]))
+                                log("[phase1] [{}] Finished: silence length".format(self.camera["name"]))
                                 self.finish_detection()
                         else:
                             self.silence_start = int(time.time())

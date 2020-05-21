@@ -6,8 +6,7 @@ import json
 from threading import Thread
 import os
 from urllib.parse import urlparse
-from urllib import request
-
+from util import log
 
 class CameraStream(Thread):
     camera = {}
@@ -21,13 +20,13 @@ class CameraStream(Thread):
 
     def set_meta(self):
 
-        print("[streamer] [{}] Save meta information".format(self.camera["name"]))
+        log("[streamer] [{}] Save meta information".format(self.camera["name"]))
         self.state.set_camera(self.camera)
 
     def run(self):
         video = self.get_capture(self.camera["url"])
 
-        print("[streamer] [{}] Starting stream".format(self.camera["name"]))
+        log("[streamer] [{}] Starting stream".format(self.camera["name"]))
 
         ctx = zmq.Context()
         s = ctx.socket(zmq.PUB)
@@ -40,7 +39,7 @@ class CameraStream(Thread):
             (grabbed, frame) = video.read()
 
             if not grabbed:
-                print("[streamer] [{}] Reconnecting to camera".format(self.camera["name"]))
+                log("[streamer] [{}] Reconnecting to camera".format(self.camera["name"]))
                 video.release()
                 video = self.get_capture(self.camera["url"])
                 time.sleep(5)
@@ -105,7 +104,7 @@ class Streamer(Thread):
         return cameras.items()
 
     def run(self):
-        print("[streamer] Starting service")
+        log("[streamer] Starting service")
         threads = []
         for cam, camera in self.get_cameras():
             thread = CameraStream(camera=camera, state=self.state)

@@ -4,23 +4,13 @@ import sys
 import threading
 from threading import Thread, RLock
 import queue
+from util import import_env, log
 
 from streamer import Streamer
 from api import ApiServer
 from phase1_detector_simple import Phase1Detector
 from phase2_detector_simple import Phase2Detector
 from cleanup import Cleanup
-
-def import_env():
-    filepath = os.path.dirname(os.path.realpath(__file__)) + '/../.env'
-    if not os.path.isfile(filepath):
-        return
-
-    with open(filepath) as fp:
-        for cnt, line in enumerate(fp):
-            parts = line.split('=', 1)
-            if len(parts) == 2:
-                os.environ[parts[0].strip()] = parts[1].strip()
 
 class State():
     cameras = {}
@@ -66,11 +56,11 @@ if __name__ == "__main__":
         while True:
             time.sleep(1)
             if threading.active_count() < total_threads:
-                print("Some thread is dead")
+                log("[main] Some thread is dead")
                 sys.exit(1)
     except KeyboardInterrupt:
 
-        print("Stopping all")
+        log("[main] Stopping all")
         cleanup.stop = True
         streamer.stop = True
         object_detector.stop = True

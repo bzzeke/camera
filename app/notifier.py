@@ -2,6 +2,7 @@ import smtplib
 from email.message import EmailMessage
 import imghdr
 import os
+from util import log
 
 class Notifier():
     def notify(self, message, attachments = []):
@@ -30,4 +31,4 @@ class Notifier():
             s.send_message(message)
             s.quit()
         except Exception as e:
-            print("[notifier] Failed to send email: %s" % str(e))
+            log("[notifier] Failed to send email: %s" % str(e))

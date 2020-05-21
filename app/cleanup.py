@@ -3,6 +3,7 @@ from os.path import join, getsize
 import re
 import time
 from threading import Thread
+from util import log
 
 class Cleanup(Thread):
 
@@ -20,14 +21,14 @@ class Cleanup(Thread):
 
 
     def run(self):
-        print("[cleanup] Starting service")
+        log("[cleanup] Starting service")
         last_check = 0
         while not self.stop:
             if time.time() - last_check >= self.period:
-                print("[cleanup] Checking space")
+                log("[cleanup] Checking space")
                 self.calculate_total_space()
                 if self.current_size >= self.max_size:
-                    print("[cleanup] Free space was exceed, need to clean up old files")
+                    log("[cleanup] Free space was exceed, need to clean up old files")
                     self.remove_oldest()
                 last_check = time.time()
 
@@ -44,7 +45,7 @@ class Cleanup(Thread):
 
                 filepath = join(root, filename)
                 total_size += getsize(filepath)
-                print("[cleanup] Removing file: {}".format(filepath))
+                log("[cleanup] Removing file: {}".format(filepath))
                 os.remove(filepath)
 
                 if self.current_size - total_size <= self.max_size:
