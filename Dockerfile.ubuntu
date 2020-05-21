@@ -105,4 +105,11 @@ RUN apt remove -y ${DEV_PACKAGES}
 WORKDIR /app
 VOLUME /app
 
+ARG STORAGE_UID
+ARG STORAGE_GID
+ARG STORAGE_USER
+
+RUN groupadd -g${STORAGE_GID} ${STORAGE_USER}
+RUN useradd -u${STORAGE_UID} -g${STORAGE_GID} ${STORAGE_USER}
+
 CMD ["python3", "-u", "/app/main.py"]

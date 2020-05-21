@@ -13,4 +13,5 @@ services:
         volumes:
             - ./app:/app
         env_file: .env
+        user: "${STORAGE_UID}:${STORAGE_GID}"
         restart: always
