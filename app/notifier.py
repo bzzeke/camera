@@ -3,21 +3,30 @@ from email.message import EmailMessage
 import imghdr
 import os
 from util import log
+from threading import Thread
 
-class Notifier():
+class Notifier(Thread):
+    message = ""
+    attachments = []
+
     def notify(self, message, attachments = []):
 
         if "CAMERA_DISABLE_NOTIFICATIONS" in os.environ:
             return
 
+        self.message = message
+        self.attachments = attachments
+        self.start()
+
+    def run(self):
         msg = EmailMessage()
-        msg.set_content(message)
+        msg.set_content(self.message)
         msg["Subject"] = "Alert"
         msg["From"] = os.environ["FROM_EMAIL"]
         msg["To"] = os.environ["NOTIFY_EMAIL"]
 
-        if len(attachments) > 0:
-            for filepath in attachments:
+        if len(self.attachments) > 0:
+            for filepath in self.attachments:
                 with open(filepath, 'rb') as fp:
                     img_data = fp.read()
 
