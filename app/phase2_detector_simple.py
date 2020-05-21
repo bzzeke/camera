@@ -15,7 +15,7 @@ import time
 import queue
 
 from util import log
-from shutil import move
+import shutil
 from datetime import date
 from api import Api
 from notifier import Notifier
@@ -96,7 +96,7 @@ class Phase2Detector(Thread):
 
                             target_filename = api.path(frame["camera"], frame["start_time"], "mp4")
                             os.makedirs(os.path.dirname(target_filename), exist_ok=True)
-                            os.rename(clip_filename, target_filename)
+                            shutil.move(clip_filename, target_filename)
                         else:
                             log("[phase2] [{}] Finished, timestamp: {}, no detections, removing clip".format(frame["camera"], frame["start_time"]))
                             os.remove(clip_filename)
