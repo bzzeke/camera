@@ -2,61 +2,64 @@ from onvif import Onvif
 from xml.etree import ElementTree
 from util import log
 
-XMAX = 1
-XMIN = -1
-YMAX = 1
-YMIN = -1
-ZMIN = -1
-ZMAX = 1
+class PTZ():
+    XMAX = 1
+    XMIN = -1
+    YMAX = 1
+    YMIN = -1
+    ZMIN = -1
+    ZMAX = 1
+    onvif = None
 
-def zoom_in(cam):
-    log("[ptz] zoom in...")
-    cam.continuousZoom(ZMAX)
+    def __init__(self, camera):
+        self.onvif = Onvif()
+        self.onvif.setup(camera["host"], camera["port"])
+        self.onvif.setAuth(camera["username"], camera["password"])
+        self.onvif.setProfileToken(self.get_profile_token())
 
-def zoom_out(cam):
-    log("[ptz] zoom out...")
-    cam.continuousZoom(ZMIN)
+    def zoom_in(self):
+        log("[ptz] zoom in...")
+        self.onvif.continuousZoom(self.ZMAX)
 
-def move_up(cam):
-    log("[ptz] move up...")
-    cam.continuousMove(0, YMAX)
+    def zoom_out(self, cam):
+        log("[ptz] zoom out...")
+        self.onvif.continuousZoom(self.ZMIN)
 
-def move_down(cam):
-    log("[ptz] move down...")
-    cam.continuousMove(0, YMIN)
+    def move_up(self):
+        log("[ptz] move up...")
+        self.onvif.continuousMove(0, self.YMAX)
 
-def move_right(cam):
-    log("[ptz] move right...")
-    cam.continuousMove(XMAX, 0)
+    def move_down(self):
+        log("[ptz] move down...")
+        self.onvif.continuousMove(0, self.YMIN)
 
-def move_left(cam):
-    log("[ptz] move left...")
-    cam.continuousMove(XMIN, 0)
+    def move_right(self):
+        log("[ptz] move right...")
+        self.onvif.continuousMove(self.XMAX, 0)
 
-def stop(cam):
-    log("[ptz] stop camera...")
-    cam.stopMove("true", "true")
+    def move_left(self):
+        log("[ptz] move left...")
+        self.onvif.continuousMove(self.XMIN, 0)
 
-def continuous_move(camera, direction):
-    cam = Onvif()
-    cam.setup(camera["host"], camera["port"])
-    cam.setAuth(camera["username"], camera["password"])
-    cam.setProfileToken(get_profile_token(cam))
+    def stop(self):
+        log("[ptz] stop camera...")
+        self.onvif.stopMove("true", "true")
 
-    globals()[direction](cam)
+    def move(self, direction):
+        return getattr(self, direction)
 
-def get_profile_token(cam):
-    response = cam.getProfiles()
+    def get_profile_token(self):
+        response = self.onvif.getProfiles()
 
-    namespaces = {
-        'soap': 'http://schemas.xmlsoap.org/soap/envelope/',
-        'trt': 'http://www.onvif.org/ver10/media/wsdl'
-    }
-    dom = ElementTree.fromstring(response)
+        namespaces = {
+            'soap': 'http://schemas.xmlsoap.org/soap/envelope/',
+            'trt': 'http://www.onvif.org/ver10/media/wsdl'
+        }
+        dom = ElementTree.fromstring(response)
 
-    names = dom.findall(
-        './/trt:Profiles',
-        namespaces,
-    )
+        names = dom.findall(
+            './/trt:Profiles',
+            namespaces,
+        )
 
-    return names[0].attrib['token']
+        return names[0].attrib['token']

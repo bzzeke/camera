@@ -5,7 +5,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
 import numpy, json
 import zmq
-import ptz
+from ptz import PTZ
 import os
 import copy
 import urllib, urllib.request
@@ -132,7 +132,8 @@ class ApiHandler(HTTPHandler):
         if cam in self.server.state.cameras:
             camera = self.server.state.cameras[cam]
             if "onvif" in camera:
-                ptz.continuous_move(camera["onvif"], direction)
+                ptz = PTZ(camera["onvif"])
+                ptz.move(direction)
                 status = "ok"
 
         return json.dumps({
