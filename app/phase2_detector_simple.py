@@ -17,7 +17,7 @@ from shutil import move
 from datetime import date
 from api import Api
 from notifier import Notifier
-
+from phase1_detector_simple import clip_path
 
 sys.path.append("detectors")
 
@@ -75,9 +75,8 @@ class Phase2Detector(Thread):
                         time.sleep(0.1)
                         continue
 
-                    print("[phase2] Got frame, queue length: {}".format(self.queue.qsize()))
-
                     if frame["status"] == "done":
+                        clip_filename = clip_path(frame["camera"], frame["start_time"])
                         if len(self.meta[frame["camera"]][frame["start_time"]]["detections"]) > 0:
                             print("[phase2] [{}] Finished, timestamp: {}, detections: {}".format(frame["camera"], frame["start_time"], ", ".join(self.meta[frame["camera"]][frame["start_time"]]["detections"])))
                             db_filename = api.db_path(frame["start_time"])
@@ -92,9 +91,12 @@ class Phase2Detector(Thread):
                                 "start_time": frame["start_time"],
                                 "objects": list(self.meta[frame["camera"]][frame["start_time"]]["detections"])
                             })
+
+                            target_filename = api.path(frame["camera"], frame["start_time"], "mp4")
+                            os.makedirs(os.path.dirname(target_filename), exist_ok=True)
+                            os.rename(clip_filename, target_filename)
                         else:
                             print("[phase2] [{}] Finished, timestamp: {}, no detections, removing clip".format(frame["camera"], frame["start_time"]))
-                            clip_filename = api.path(frame["camera"], frame["start_time"], "mp4")
                             os.remove(clip_filename)
 
                         del self.meta[frame["camera"]][frame["start_time"]]
@@ -130,7 +132,7 @@ class Phase2Detector(Thread):
                         [boxes, scores, classes, num_detections],
                         feed_dict={image_tensor: image_np_expanded}
                     )
-                    print("[phase2] [{}] Frame processed for: {} seconds".format(frame["camera"], (time.time() - s)))
+                    print("[phase2] [{}] Frame processed for: {} seconds, queue length: {}".format(frame["camera"], (time.time() - s), self.queue.qsize()))
 
                     boxes = np.squeeze(boxes)
                     classes = np.squeeze(classes).astype(np.int32)

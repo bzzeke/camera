@@ -6,7 +6,9 @@ import os
 
 import time
 from detectors.phase1 import MotionDetector
-from api import Api
+
+def clip_path(camera, timestamp):
+    return "/dev/shm/{}_{}.mp4".format(camera, timestamp)
 
 class Phase1Detector(Thread):
     MAX_LENGTH = 30 # seconds
@@ -65,7 +67,6 @@ class Phase1Detector(Thread):
             if self.detection_start > 0:
 
                 if self.current_frame_index % self.RATE == 0:
-                    print("[phase1] [{}] Sending frame: {}".format(self.camera["name"], self.current_frame_index))
                     self.queue.put({
                         "camera": self.camera["name"],
                         "start_time": self.detection_start,
@@ -106,9 +107,7 @@ class Phase1Detector(Thread):
             "start_time": self.detection_start
         })
 
-        api = Api()
-        filepath =  api.path(self.camera["name"], self.detection_start, "mp4")
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        filepath = clip_path(self.camera["name"], self.detection_start)
 
         fourcc = cv2.VideoWriter_fourcc('a', 'v', 'c', '1')
         if os.environ["CAPTURER_TYPE"] == "gstreamer":
