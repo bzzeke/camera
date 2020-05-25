@@ -1,15 +1,6 @@
-import numpy as np
 import os
 import sys
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-import tensorflow as tf
-import zipfile
 from threading import Thread
-from collections import defaultdict
-from io import StringIO
-from matplotlib import pyplot as plt
-from PIL import Image
-import cv2
 import pickledb
 import time
 import queue
@@ -21,145 +12,242 @@ from api import Api
 from notifier import Notifier
 from phase1_detector_simple import clip_path
 
-sys.path.append("detectors")
+from math import exp as exp
+from openvino.inference_engine import IENetwork, IECore
+import cv2
 
-from detectors.object_detection.utils import label_map_util
-from detectors.object_detection.utils import visualization_utils as vis_util
+class YoloParams:
+    def __init__(self, param, side):
+        self.num = 3 if 'num' not in param else int(param['num'])
+        self.coords = 4 if 'coords' not in param else int(param['coords'])
+        self.classes = 80 if 'classes' not in param else int(param['classes'])
+        self.side = side
+        self.anchors = [10.0, 13.0, 16.0, 30.0, 33.0, 23.0, 30.0, 61.0, 62.0, 45.0, 59.0, 119.0, 116.0, 90.0, 156.0, 198.0, 373.0, 326.0] if 'anchors' not in param else [float(a) for a in param['anchors'].split(',')]
+        self.isYoloV3 = False
 
-# tf.get_logger().setLevel('INFO')
+        if param.get('mask'):
+            mask = [int(idx) for idx in param['mask'].split(',')]
+            self.num = len(mask)
+
+            maskedAnchors = []
+            for idx in mask:
+                maskedAnchors += [self.anchors[idx * 2], self.anchors[idx * 2 + 1]]
+            self.anchors = maskedAnchors
+
+            self.isYoloV3 = True
+
+    def entry_index(self, side, coord, classes, location, entry):
+        side_power_2 = side ** 2
+        n = location // side_power_2
+        loc = location % side_power_2
+        return int(side_power_2 * (n * (coord + classes + 1) + entry) + loc)
+
+
+    def scale_bbox(self, x, y, h, w, class_id, confidence, h_scale, w_scale):
+        xmin = int((x - w / 2) * w_scale)
+        ymin = int((y - h / 2) * h_scale)
+        xmax = int(xmin + w * w_scale)
+        ymax = int(ymin + h * h_scale)
+        return dict(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, class_id=class_id, confidence=confidence)
+
+
+    def parse_yolo_region(self, blob, resized_image_shape, original_im_shape, threshold):
+        _, _, out_blob_h, out_blob_w = blob.shape
+        assert out_blob_w == out_blob_h, "Invalid size of output blob. It sould be in NCHW layout and height should " \
+                                        "be equal to width. Current height = {}, current width = {}" \
+                                        "".format(out_blob_h, out_blob_w)
+
+        orig_im_h, orig_im_w = original_im_shape
+        resized_image_h, resized_image_w = resized_image_shape
+        objects = list()
+        predictions = blob.flatten()
+        side_square = self.side * self.side
+
+        for i in range(side_square):
+            row = i // self.side
+            col = i % self.side
+            for n in range(self.num):
+                obj_index = self.entry_index(self.side, self.coords, self.classes, n * side_square + i, self.coords)
+                scale = predictions[obj_index]
+                if scale < threshold:
+                    continue
+                box_index = self.entry_index(self.side, self.coords, self.classes, n * side_square + i, 0)
+                x = (col + predictions[box_index + 0 * side_square]) / self.side
+                y = (row + predictions[box_index + 1 * side_square]) / self.side
+
+                try:
+                    w_exp = exp(predictions[box_index + 2 * side_square])
+                    h_exp = exp(predictions[box_index + 3 * side_square])
+                except OverflowError:
+                    continue
+
+                w = w_exp * self.anchors[2 * n] / (resized_image_w if self.isYoloV3 else self.side)
+                h = h_exp * self.anchors[2 * n + 1] / (resized_image_h if self.isYoloV3 else self.side)
+                for j in range(self.classes):
+                    class_index = self.entry_index(self.side, self.coords, self.classes, n * side_square + i,
+                                            self.coords + 1 + j)
+                    confidence = scale * predictions[class_index]
+                    if confidence < threshold:
+                        continue
+                    objects.append(self.scale_bbox(x=x, y=y, h=h, w=w, class_id=j, confidence=confidence,
+                                            h_scale=orig_im_h, w_scale=orig_im_w))
+        return objects
+
+
+def intersection_over_union(box_1, box_2):
+    width_of_overlap_area = min(box_1['xmax'], box_2['xmax']) - max(box_1['xmin'], box_2['xmin'])
+    height_of_overlap_area = min(box_1['ymax'], box_2['ymax']) - max(box_1['ymin'], box_2['ymin'])
+    if width_of_overlap_area < 0 or height_of_overlap_area < 0:
+        area_of_overlap = 0
+    else:
+        area_of_overlap = width_of_overlap_area * height_of_overlap_area
+    box_1_area = (box_1['ymax'] - box_1['ymin']) * (box_1['xmax'] - box_1['xmin'])
+    box_2_area = (box_2['ymax'] - box_2['ymin']) * (box_2['xmax'] - box_2['xmin'])
+    area_of_union = box_1_area + box_2_area - area_of_overlap
+    if area_of_union == 0:
+        return 0
+    return area_of_overlap / area_of_union
+
 
 class Phase2Detector(Thread):
 
     PATH_TO_MODEL = ""
-    PATH_TO_LABELS = "detectors/object_detection/data/mscoco_label_map.pbtxt"
-    NUM_CLASSES = 90
+    PATH_TO_LABELS = ""
     DETECTION_CATEGORIES = ["person", "car", "truck", "bus", "motorcycle", "bicycle"]
-    RATE = 10
 
-    detection_graph = None
-    category_index = None
+    DEVICE = "CPU"
+    PROB_THRESHOLD = 0.5
+    IOU_THRESHOLD = 0.4
+
     meta = {}
+    labels_map = []
+    net = None
+    exec_net = None
     queue = None
     stop = False
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, queue=None):
         super(Phase2Detector, self).__init__(group=group, target=target, name=name)
         self.PATH_TO_MODEL = os.environ["MODEL_PATH"]
+        self.PATH_TO_LABELS = os.path.dirname(self.PATH_TO_MODEL) + "/coco_classes.txt"
+        self.DEVICE = os.environ["INFERENCE_DEVICE"]
         self.queue = queue
 
-        self.init_detection_graph()
-        self.init_labels()
+        self.init_model()
 
-    def init_detection_graph(self):
-        self.detection_graph = tf.Graph()
-        with self.detection_graph.as_default():
-            od_graph_def = tf.compat.v1.GraphDef()
-            with tf.io.gfile.GFile(self.PATH_TO_MODEL, 'rb') as fid:
-                serialized_graph = fid.read()
-                od_graph_def.ParseFromString(serialized_graph)
-                tf.import_graph_def(od_graph_def, name="")
 
-    def init_labels(self):
-        label_map = label_map_util.load_labelmap(self.PATH_TO_LABELS)
-        categories = label_map_util.convert_label_map_to_categories(label_map, max_num_classes=self.NUM_CLASSES, use_display_name=True)
-        self.category_index = label_map_util.create_category_index(categories)
+    def init_model(self):
+        model_bin = os.path.splitext(self.PATH_TO_MODEL)[0] + ".bin"
+        ie = IECore()
+        self.net = ie.read_network(model=self.PATH_TO_MODEL, weights=model_bin)
+        assert len(self.net.inputs.keys()) == 1, "Sample supports only YOLO V3 based single input topologies"
+
+        self.net.batch_size = 1
+
+        with open(self.PATH_TO_LABELS, 'r') as f:
+            self.labels_map = [x.strip() for x in f]
+
+        self.exec_net = ie.load_network(network=self.net, num_requests=2, device_name=self.DEVICE)
+
 
     def run(self):
         api = Api()
 
         log("[phase2] Starting detector")
-        with self.detection_graph.as_default():
-            with tf.compat.v1.Session(graph=self.detection_graph) as sess:
-                while not self.stop:
-                    try:
-                        frame = self.queue.get(block=False)
-                    except queue.Empty:
-                        time.sleep(0.1)
-                        continue
 
-                    if frame["status"] == "done":
-                        clip_filename = clip_path(frame["camera"], frame["start_time"])
-                        if len(self.meta[frame["camera"]][frame["start_time"]]["detections"]) > 0:
-                            log("[phase2] [{}] Finished, timestamp: {}, detections: {}".format(frame["camera"], frame["start_time"], ", ".join(self.meta[frame["camera"]][frame["start_time"]]["detections"])))
-                            db_filename = api.db_path(frame["start_time"])
-                            os.makedirs(os.path.dirname(db_filename), exist_ok=True)
-                            db = pickledb.load(db_filename, True, sig=False)
+        cur_request_id = 0
+        input_blob = next(iter(self.net.inputs))
+        n, c, h, w = self.net.inputs[input_blob].shape
 
-                            if not db.exists("clips"):
-                                db.lcreate("clips")
+        while not self.stop:
+            try:
+                frame = self.queue.get(block=False)
+            except queue.Empty:
+                time.sleep(0.1)
+                continue
 
-                            db.ladd("clips", {
-                                "camera": frame["camera"],
-                                "start_time": frame["start_time"],
-                                "objects": list(self.meta[frame["camera"]][frame["start_time"]]["detections"])
-                            })
+            if frame["status"] == "done":
+                clip_filename = clip_path(frame["camera"], frame["start_time"])
+                if len(self.meta[frame["camera"]][frame["start_time"]]["detections"]) > 0:
+                    log("[phase2] [{}] Finished, timestamp: {}, detections: {}".format(frame["camera"], frame["start_time"], ", ".join(self.meta[frame["camera"]][frame["start_time"]]["detections"])))
+                    db_filename = api.db_path(frame["start_time"])
+                    os.makedirs(os.path.dirname(db_filename), exist_ok=True)
+                    db = pickledb.load(db_filename, True, sig=False)
 
-                            target_filename = api.path(frame["camera"], frame["start_time"], "mp4")
-                            os.makedirs(os.path.dirname(target_filename), exist_ok=True)
-                            shutil.move(clip_filename, target_filename)
-                        else:
-                            log("[phase2] [{}] Finished, timestamp: {}, no detections, removing clip".format(frame["camera"], frame["start_time"]))
-                            os.remove(clip_filename)
+                    if not db.exists("clips"):
+                        db.lcreate("clips")
 
-                        del self.meta[frame["camera"]][frame["start_time"]]
-                        continue
-                    elif frame["status"] == "start":
-                        log("[phase2] [{}] Start detection, timestamp: {}".format(frame["camera"], frame["start_time"]))
+                    db.ladd("clips", {
+                        "camera": frame["camera"],
+                        "start_time": frame["start_time"],
+                        "objects": list(self.meta[frame["camera"]][frame["start_time"]]["detections"])
+                    })
 
-                        if frame["camera"] not in self.meta:
-                            self.meta[frame["camera"]] = {}
+                    target_filename = api.path(frame["camera"], frame["start_time"], "mp4")
+                    os.makedirs(os.path.dirname(target_filename), exist_ok=True)
+                    shutil.move(clip_filename, target_filename)
+                else:
+                    log("[phase2] [{}] Finished, timestamp: {}, no detections, removing clip".format(frame["camera"], frame["start_time"]))
+                    os.remove(clip_filename)
 
-                        self.meta[frame["camera"]][frame["start_time"]] = {
-                            "detections": set(),
-                            "snapshot": False,
-                            "width": frame["width"],
-                            "height": frame["height"]
-                        }
-                        continue
-                    else:
-                        frame_img = frame["frame"]
+                del self.meta[frame["camera"]][frame["start_time"]]
+                continue
+            elif frame["status"] == "start":
+                log("[phase2] [{}] Start detection, timestamp: {}".format(frame["camera"], frame["start_time"]))
 
+                if frame["camera"] not in self.meta:
+                    self.meta[frame["camera"]] = {}
 
-                    small_frame = cv2.resize(frame_img, (640, int(640 * self.meta[frame["camera"]][frame["start_time"]]["height"] / self.meta[frame["camera"]][frame["start_time"]]["width"])), interpolation = cv2.INTER_AREA)
-                    image_np_expanded = np.expand_dims(small_frame, axis=0)
+                self.meta[frame["camera"]][frame["start_time"]] = {
+                    "detections": set(),
+                    "snapshot": False,
+                    "width": frame["width"],
+                    "height": frame["height"]
+                }
+                continue
+            else:
+                frame_img = frame["frame"]
 
-                    image_tensor = self.detection_graph.get_tensor_by_name('image_tensor:0')
-                    boxes = self.detection_graph.get_tensor_by_name('detection_boxes:0')
-                    scores = self.detection_graph.get_tensor_by_name('detection_scores:0')
-                    classes = self.detection_graph.get_tensor_by_name('detection_classes:0')
-                    num_detections = self.detection_graph.get_tensor_by_name('num_detections:0')
+            request_id = cur_request_id
+            in_frame = cv2.resize(frame_img, (w, h))
+            in_frame = in_frame.transpose((2, 0, 1))  # Change data layout from HWC to CHW
+            in_frame = in_frame.reshape((n, c, h, w))
 
-                    s = time.time()
-                    (boxes, scores, classes, num_detections) = sess.run(
-                        [boxes, scores, classes, num_detections],
-                        feed_dict={image_tensor: image_np_expanded}
-                    )
-                    log("[phase2] [{}] Frame processed for: {} seconds, queue length: {}".format(frame["camera"], (time.time() - s), self.queue.qsize()))
+            s = time.time()
+            self.exec_net.start_async(request_id=request_id, inputs={input_blob: in_frame})
 
-                    boxes = np.squeeze(boxes)
-                    classes = np.squeeze(classes).astype(np.int32)
-                    scores = np.squeeze(scores)
+            objects = list()
+            if self.exec_net.requests[cur_request_id].wait(-1) == 0:
+                output = self.exec_net.requests[cur_request_id].outputs
+                for layer_name, out_blob in output.items():
+                    out_blob = out_blob.reshape(self.net.layers[self.net.layers[layer_name].parents[0]].out_data[0].shape)
+                    layer_params = YoloParams(self.net.layers[layer_name].params, out_blob.shape[2])
+                    objects += layer_params.parse_yolo_region(out_blob, in_frame.shape[2:], frame_img.shape[:-1], self.PROB_THRESHOLD)
 
-                    (boxes, scores, classes) = self.filter_boxes(0.5, boxes, scores, classes, self.DETECTION_CATEGORIES)
+            objects = self.filter_objects(objects)
 
-                    if len(boxes):
+            log("[phase2] [{}] Frame processed for: {} seconds, queue length: {}".format(frame["camera"], (time.time() - s), self.queue.qsize()))
 
+            if len(objects):
+                for obj in objects:
+                    self.meta[frame["camera"]][frame["start_time"]]["detections"].add(obj["category"])
 
-                        for i in range(classes.shape[0]):
-                            if classes[i] in self.category_index.keys():
-                                self.meta[frame["camera"]][frame["start_time"]]["detections"].add(self.category_index[classes[i]]['name'])
+                if self.meta[frame["camera"]][frame["start_time"]]["snapshot"] == False:
 
-                        if self.meta[frame["camera"]][frame["start_time"]]["snapshot"] == False:
-                            frame_img = vis_util.visualize_boxes_and_labels_on_image_array(
-                                np.array(frame_img),
-                                boxes,
-                                classes,
-                                scores,
-                                self.category_index,
-                                use_normalized_coordinates=True,
-                                line_thickness=3)
+                    origin_im_size = frame_img.shape[:-1]
+                    save = False
+                    for obj in objects:
+                        if obj['xmax'] > origin_im_size[1] or obj['ymax'] > origin_im_size[0] or obj['xmin'] < 0 or obj['ymin'] < 0:
+                            continue
+                        color = (int(min(obj['class_id'] * 12.5, 255)), min(obj['class_id'] * 7, 255), min(obj['class_id'] * 5, 255))
+                        det_label = self.labels_map[obj['class_id']] if self.labels_map and len(self.labels_map) >= obj['class_id'] else str(obj['class_id'])
 
-                            self.save_snapshot(frame_img, frame, api)
+                        cv2.rectangle(frame_img, (obj['xmin'], obj['ymin']), (obj['xmax'], obj['ymax']), color, 2)
+                        cv2.putText(frame_img, det_label + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %', (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
+                        save = True
+
+                    if save:
+                        self.save_snapshot(frame_img, frame, api)
 
     def save_snapshot(self, frame_img, frame, api):
         snapshot_filename = api.path(frame["camera"], frame["start_time"], "jpeg")
@@ -171,15 +259,19 @@ class Phase2Detector(Thread):
 
         self.meta[frame["camera"]][frame["start_time"]]["snapshot"] = True
 
-    def filter_boxes(self, min_score, boxes, scores, classes, categories):
-        n = len(classes)
-        idxs = []
+    def filter_objects(self, objects):
 
-        for i in range(n):
-            if self.category_index[classes[i]]['name'] in categories and scores[i] >= min_score:
-                idxs.append(i)
+        objects = sorted(objects, key=lambda obj : obj['confidence'], reverse=True)
 
-        filtered_boxes = boxes[idxs, ...]
-        filtered_scores = scores[idxs, ...]
-        filtered_classes = classes[idxs, ...]
-        return filtered_boxes, filtered_scores, filtered_classes
+        for i in range(len(objects)):
+            objects[i]["category"] = self.labels_map[objects[i]['class_id']]
+            if objects[i]['confidence'] == 0:
+                continue
+            for j in range(i + 1, len(objects)):
+                if intersection_over_union(objects[i], objects[j]) > self.IOU_THRESHOLD:
+                    objects[j]['confidence'] = 0
+
+        objects = [obj for obj in objects if obj['confidence'] >= self.PROB_THRESHOLD and obj["category"] in self.DETECTION_CATEGORIES]
+
+        return objects
+
