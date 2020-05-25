@@ -1,0 +1,28 @@
+FROM openvino/ubuntu18_runtime:latest
+
+USER root
+
+ENV DEBIAN_FRONTEND "noninteractive"
+ENV MODEL_PACKAGE "http://download.tensorflow.org/models/object_detection/faster_rcnn_inception_v2_coco_2018_01_28.tar.gz"
+
+RUN	pip3 install --no-cache-dir numpy pyzmq	pickledb colorama
+RUN	pip3 install --no-cache-dir numba
+
+# Motion detector
+ADD build/motion_detector /tmp/motion_detector
+RUN cd /tmp/motion_detector && make
+RUN rm -fr /tmp/motion_detector
+
+ADD build/yolo-v2-ov /opt/model
+
+# Download model
+# RUN	mkdir /opt/model && \
+# 	cd /opt/model && \
+# 	curl -SL -o model.tgz -O ${MODEL_PACKAGE} && \
+# 	tar --strip-components=1 -zxf model.tgz && \
+# 	rm -f model.tgz
+
+WORKDIR /app
+VOLUME /app
+
+CMD ["python3", "-u", "/app/main.py"]
