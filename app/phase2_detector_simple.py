@@ -123,15 +123,15 @@ class Phase2Detector(Thread):
     labels_map = []
     net = None
     exec_net = None
-    queue = None
+    in_queue = None
     stop = False
 
-    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, queue=None):
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, in_queue=None):
         super(Phase2Detector, self).__init__(group=group, target=target, name=name)
         self.PATH_TO_MODEL = os.environ["MODEL_PATH"]
         self.PATH_TO_LABELS = os.path.dirname(self.PATH_TO_MODEL) + "/coco_classes.txt"
         self.DEVICE = os.environ["INFERENCE_DEVICE"]
-        self.queue = queue
+        self.in_queue = in_queue
 
         self.init_model()
 
@@ -151,9 +151,7 @@ class Phase2Detector(Thread):
 
 
     def run(self):
-        api = Api()
-
-        log("[phase2] Starting detector")
+        log("[detector] Starting detector")
 
         cur_request_id = 0
         input_blob = next(iter(self.net.inputs))
@@ -161,55 +159,13 @@ class Phase2Detector(Thread):
 
         while not self.stop:
             try:
-                frame = self.queue.get(block=False)
+                (out_queue, frame) = self.in_queue.get(block=False)
             except queue.Empty:
                 time.sleep(0.1)
                 continue
 
-            if frame["status"] == "done":
-                clip_filename = clip_path(frame["camera"], frame["start_time"])
-                if len(self.meta[frame["camera"]][frame["start_time"]]["detections"]) > 0:
-                    log("[phase2] [{}] Finished, timestamp: {}, detections: {}".format(frame["camera"], frame["start_time"], ", ".join(self.meta[frame["camera"]][frame["start_time"]]["detections"])))
-                    db_filename = api.db_path(frame["start_time"])
-                    os.makedirs(os.path.dirname(db_filename), exist_ok=True)
-                    db = pickledb.load(db_filename, True, sig=False)
-
-                    if not db.exists("clips"):
-                        db.lcreate("clips")
-
-                    db.ladd("clips", {
-                        "camera": frame["camera"],
-                        "start_time": frame["start_time"],
-                        "objects": list(self.meta[frame["camera"]][frame["start_time"]]["detections"])
-                    })
-
-                    target_filename = api.path(frame["camera"], frame["start_time"], "mp4")
-                    os.makedirs(os.path.dirname(target_filename), exist_ok=True)
-                    shutil.move(clip_filename, target_filename)
-                else:
-                    log("[phase2] [{}] Finished, timestamp: {}, no detections, removing clip".format(frame["camera"], frame["start_time"]))
-                    os.remove(clip_filename)
-
-                del self.meta[frame["camera"]][frame["start_time"]]
-                continue
-            elif frame["status"] == "start":
-                log("[phase2] [{}] Start detection, timestamp: {}".format(frame["camera"], frame["start_time"]))
-
-                if frame["camera"] not in self.meta:
-                    self.meta[frame["camera"]] = {}
-
-                self.meta[frame["camera"]][frame["start_time"]] = {
-                    "detections": set(),
-                    "snapshot": False,
-                    "width": frame["width"],
-                    "height": frame["height"]
-                }
-                continue
-            else:
-                frame_img = frame["frame"]
-
             request_id = cur_request_id
-            in_frame = cv2.resize(frame_img, (w, h))
+            in_frame = cv2.resize(frame, (w, h))
             in_frame = in_frame.transpose((2, 0, 1))  # Change data layout from HWC to CHW
             in_frame = in_frame.reshape((n, c, h, w))
 
@@ -222,42 +178,11 @@ class Phase2Detector(Thread):
                 for layer_name, out_blob in output.items():
                     out_blob = out_blob.reshape(self.net.layers[self.net.layers[layer_name].parents[0]].out_data[0].shape)
                     layer_params = YoloParams(self.net.layers[layer_name].params, out_blob.shape[2])
-                    objects += layer_params.parse_yolo_region(out_blob, in_frame.shape[2:], frame_img.shape[:-1], self.PROB_THRESHOLD)
+                    objects += layer_params.parse_yolo_region(out_blob, in_frame.shape[2:], frame.shape[:-1], self.PROB_THRESHOLD)
 
             objects = self.filter_objects(objects)
-
-            log("[phase2] [{}] Frame processed for: {} seconds, queue length: {}".format(frame["camera"], (time.time() - s), self.queue.qsize()))
-
-            if len(objects):
-                for obj in objects:
-                    self.meta[frame["camera"]][frame["start_time"]]["detections"].add(obj["category"])
-
-                if self.meta[frame["camera"]][frame["start_time"]]["snapshot"] == False:
-
-                    origin_im_size = frame_img.shape[:-1]
-                    save = False
-                    for obj in objects:
-                        if obj['xmax'] > origin_im_size[1] or obj['ymax'] > origin_im_size[0] or obj['xmin'] < 0 or obj['ymin'] < 0:
-                            continue
-                        color = (int(min(obj['class_id'] * 12.5, 255)), min(obj['class_id'] * 7, 255), min(obj['class_id'] * 5, 255))
-                        det_label = self.labels_map[obj['class_id']] if self.labels_map and len(self.labels_map) >= obj['class_id'] else str(obj['class_id'])
-
-                        cv2.rectangle(frame_img, (obj['xmin'], obj['ymin']), (obj['xmax'], obj['ymax']), color, 2)
-                        cv2.putText(frame_img, det_label + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %', (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
-                        save = True
-
-                    if save:
-                        self.save_snapshot(frame_img, frame, api)
-
-    def save_snapshot(self, frame_img, frame, api):
-        snapshot_filename = api.path(frame["camera"], frame["start_time"], "jpeg")
-        os.makedirs(os.path.dirname(snapshot_filename), exist_ok=True)
-        cv2.imwrite(snapshot_filename, frame_img)
-
-        notifier = Notifier()
-        notifier.notify("Motion detected on camera {}".format(frame["camera"]), [snapshot_filename])
-
-        self.meta[frame["camera"]][frame["start_time"]]["snapshot"] = True
+            out_queue.put((frame, objects))
+            log("[detector] Frame processed for: {} seconds, queue length: {}".format((time.time() - s), self.in_queue.qsize()))
 
     def filter_objects(self, objects):
 
