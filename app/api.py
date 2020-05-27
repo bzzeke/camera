@@ -167,8 +167,8 @@ class ApiHandler(HTTPHandler):
 
         api = Api()
         # format: /clips_list
-        # format: /clips_list/-/-/182234644
-        # format: /clips_list/-/person
+        # format: /clips_list/Any camera/All objects/182234644
+        # format: /clips_list/Any camera/person
         camera = args[0] if len(args) >= 1 else ""
         rule = args[1] if len(args) >= 2 else ""
         date = int(args[2]) if len(args) >= 3 else int(time.time())
