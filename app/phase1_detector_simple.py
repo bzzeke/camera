@@ -16,7 +16,12 @@ class ObjectState():
     objects = None
     previous_objects = None
     stale_counter = 0
-    start_motion = 0
+    motion = 0
+    start_timestamp = 0
+    clip_writer = None
+
+    def __init__(self, clip_writer=None):
+        self.clip_writer = clip_writer
 
     def generate_state(self, objects):
         state = []
@@ -38,50 +43,41 @@ class ObjectState():
 
         return state
 
-    def check_state(self, objects, frameno):
+    def check_state(self, objects, timestamp):
         if self.objects == None:
             self.objects = self.generate_state(objects)
             return
 
         if len(objects) != len(self.objects):
-            # self.stale_counter = 0
-            print("Motion, count changed")
-            if self.start_motion == 0:
-                self.start_motion = frameno - 1
+            self.start_motion(timestamp)
         else:
             hit_spots = set()
             for obj in objects:
                 hit_spots = self.in_spot(obj, self.objects, hit_spots)
 
-            if len(hit_spots) == len(self.objects):
-                print("No motion")
+            if len(hit_spots) != len(self.objects):
+                self.start_motion(timestamp)
             else:
-                self.stale_counter = 0
-                print("Motion, object moved")
-                if self.start_motion == 0:
-                    self.start_motion = frameno - 1
-
-        # compare with previous frame
-        if self.previous_objects != None:
-            if len(objects) == len(self.previous_objects):
-                hit_spots = set()
-                for obj in objects:
-                    hit_spots = self.in_spot(obj, self.previous_objects, hit_spots)
-
-                if len(hit_spots) == len(self.previous_objects):
-                    print("No motion since previous frame: {}".format(self.stale_counter))
-                    self.stale_counter += 1
+                self.stale_counter += 1
 
         # fix state
         if self.stale_counter >= 3:
-            print("Fix current state")
-            self.objects = self.generate_state(objects)
             self.stale_counter = 0
-            if self.start_motion > 0:
-                print("Motion recorded from {} to {} frame".format(self.start_motion, frameno))
-                self.start_motion = 0
+            self.stop_motion(timestamp)
 
-        self.previous_objects = self.generate_state(objects)
+        self.objects = self.generate_state(objects)
+
+    def start_motion(self, timestamp):
+        self.stale_counter = 0
+        if self.motion == 0:
+            self.motion = timestamp
+            self.clip_writer.startx = True
+
+    def stop_motion(self, timestamp):
+        if self.motion > 0:
+            print("Motion recorded from {} to {} frame".format(self.motion, timestamp))
+            self.clip_writer.startx = False
+            self.motion = 0
 
     def in_spot(self, new_obj, objects, hit_spots):
         center_x = new_obj["xmin"] + int((new_obj["xmax"] - new_obj["xmin"]) / 2)
@@ -105,34 +101,65 @@ class ObjectState():
         )
 
 
+class ClipWriter(Thread):
+    stop = False
+    camera = None
+    write_queue = None
+    startx = False
+
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera=None, write_queue=None):
+        super(ClipWriter, self).__init__(group=group, target=target, name=name)
+        self.camera = camera
+        self.write_queue = write_queue
+
+    def run(self):
+
+        out = None
+        while not self.stop:
+
+            if self.startx == True and out == None:
+                fourcc = cv2.VideoWriter_fourcc('a', 'v', 'c', '1')
+                out = cv2.VideoWriter("clip_{}.mp4".format(int(time.time())), fourcc, self.camera["meta"]["fps"], (self.camera["meta"]["width"], self.camera["meta"]["height"]))
+
+            if self.startx == False and out != None:
+                out.release()
+                out = None
+
+            try:
+                frame = self.write_queue.get(block=False)
+            except queue.Empty:
+                time.sleep(0.01)
+                continue
+
+            if out:
+                out.write(frame)
+
+
 class ResponseReader(Thread):
     stop = False
     camera = {}
     response_queue = None
     object_state = None
 
-    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, response_queue=None):
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, response_queue=None, clip_writer=None):
         super(ResponseReader, self).__init__(group=group, target=target, name=name)
         self.response_queue = response_queue
         self.stop = False
-        self.object_state = ObjectState()
+        self.object_state = ObjectState(clip_writer=clip_writer)
 
     def run(self):
-        it = 0
-        fr = 0
+        save_snapshot = False
         while not self.stop:
             try:
-                (frame, objects) = self.response_queue.get(block=False)
-                fr += 1
+                (frame, timestamp, objects) = self.response_queue.get(block=False)
             except queue.Empty:
                 time.sleep(0.1)
-                # print("Motion from {} to {} frame".format(self.object_state.start_motion, self.object_state.stop_motion))
                 continue
 
-            self.object_state.check_state(objects, fr)
+            self.object_state.check_state(objects, timestamp)
 
-            if self.object_state.start_motion > 0:
-                it += 1
+            if self.object_state.motion > 0 and save_snapshot == False:
+                save_snapshot = True
                 origin_im_size = frame.shape[:-1]
                 if len(objects) > 0:
                     for obj in objects:
@@ -144,7 +171,11 @@ class ResponseReader(Thread):
                         cv2.rectangle(frame, (obj['xmin'], obj['ymin']), (obj['xmax'], obj['ymax']), color, 2)
                         cv2.putText(frame, det_label + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %', (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
 
-                cv2.imwrite('frame{}.jpg'.format(it), frame)
+                print("Saving snapshot")
+                cv2.imwrite('snapshot_{}.jpg'.format(self.object_state.motion), frame)
+
+            if self.object_state.motion == 0:
+                save_snapshot = False
 
 
 
@@ -163,6 +194,8 @@ class Phase1Detector(Thread):
     current_frame_index = 0
     out = None
     response_reader = None
+    write_queue = None
+    clip_writer = None
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera=None, out_queue=None):
         super(Phase1Detector, self).__init__(group=group, target=target, name=name)
@@ -170,7 +203,12 @@ class Phase1Detector(Thread):
         self.out_queue = out_queue
         self.stop = False
         self.response_queue = queue.Queue()
-        self.response_reader = ResponseReader(response_queue=self.response_queue)
+
+        self.write_queue = queue.Queue()
+        self.clip_writer = ClipWriter(camera=camera, write_queue=self.write_queue)
+        self.clip_writer.start()
+
+        self.response_reader = ResponseReader(response_queue=self.response_queue, clip_writer=self.clip_writer)
         self.response_reader.start()
 
     def run(self):
@@ -181,13 +219,11 @@ class Phase1Detector(Thread):
         s.setsockopt(zmq.SUBSCRIBE, b"")
         s.setsockopt(zmq.RCVTIMEO, 2000)
 
+        prev_time = 0
         while not self.stop:
             try:
                 msg = s.recv()
             except:
-                if self.detection_start > 0:
-                    log("[phase1] [{}] Finished: reader timeout".format(self.camera["name"]))
-
                 continue
 
             A = np.frombuffer(msg, dtype=self.camera["meta"]["dtype"])
@@ -195,7 +231,10 @@ class Phase1Detector(Thread):
             del A
 
             if self.current_frame_index % self.RATE == 0:
-                self.out_queue.put((self.response_queue, frame))
+                self.out_queue.put((self.response_queue, frame, time.time()))
+
+            if self.clip_writer.startx == True:
+                self.write_queue.put(frame)
 
             self.current_frame_index += 1
 

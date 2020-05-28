@@ -159,9 +159,9 @@ class Phase2Detector(Thread):
 
         while not self.stop:
             try:
-                (out_queue, frame) = self.in_queue.get(block=False)
+                (out_queue, frame, timestamp) = self.in_queue.get(block=False)
             except queue.Empty:
-                time.sleep(0.1)
+                time.sleep(0.01)
                 continue
 
             request_id = cur_request_id
@@ -181,8 +181,8 @@ class Phase2Detector(Thread):
                     objects += layer_params.parse_yolo_region(out_blob, in_frame.shape[2:], frame.shape[:-1], self.PROB_THRESHOLD)
 
             objects = self.filter_objects(objects)
-            out_queue.put((frame, objects))
-            log("[detector] Frame processed for: {} seconds, queue length: {}".format((time.time() - s), self.in_queue.qsize()))
+            out_queue.put((frame, timestamp, objects))
+            # log("[detector] Frame processed for: {} seconds, queue length: {}".format((time.time() - s), self.in_queue.qsize()))
 
     def filter_objects(self, objects):
 
