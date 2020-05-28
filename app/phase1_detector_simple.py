@@ -13,10 +13,13 @@ def clip_path(camera, timestamp):
 
 
 class ObjectState():
-    objects = []
-    hit_spots = set()
+    objects = None
+    previous_objects = None
+    stale_counter = 0
+    start_motion = 0
 
-    def set_state(self, objects):
+    def generate_state(self, objects):
+        state = []
         for obj in objects:
             new_obj = {
                 "center_x": obj["xmin"] + int((obj["xmax"] - obj["xmin"]) / 2),
@@ -31,37 +34,67 @@ class ObjectState():
 
             new_obj["spot"] = self.calculate_spot(new_obj)
 
-            self.objects.append(new_obj)
+            state.append(new_obj)
 
-    def check_state(self, objects):
-        if len(self.objects) == 0:
-            self.set_state(objects)
+        return state
+
+    def check_state(self, objects, frameno):
+        if self.objects == None:
+            self.objects = self.generate_state(objects)
             return
 
         if len(objects) != len(self.objects):
+            # self.stale_counter = 0
             print("Motion, count changed")
+            if self.start_motion == 0:
+                self.start_motion = frameno - 1
         else:
-            self.hit_spots = set()
+            hit_spots = set()
             for obj in objects:
-                self.in_spot(obj)
+                hit_spots = self.in_spot(obj, self.objects, hit_spots)
 
-            if len(self.hit_spots) == len(self.objects):
+            if len(hit_spots) == len(self.objects):
                 print("No motion")
             else:
+                self.stale_counter = 0
                 print("Motion, object moved")
+                if self.start_motion == 0:
+                    self.start_motion = frameno - 1
 
-    def in_spot(self, new_obj):
+        # compare with previous frame
+        if self.previous_objects != None:
+            if len(objects) == len(self.previous_objects):
+                hit_spots = set()
+                for obj in objects:
+                    hit_spots = self.in_spot(obj, self.previous_objects, hit_spots)
+
+                if len(hit_spots) == len(self.previous_objects):
+                    print("No motion since previous frame: {}".format(self.stale_counter))
+                    self.stale_counter += 1
+
+        # fix state
+        if self.stale_counter >= 3:
+            print("Fix current state")
+            self.objects = self.generate_state(objects)
+            self.stale_counter = 0
+            if self.start_motion > 0:
+                print("Motion recorded from {} to {} frame".format(self.start_motion, frameno))
+                self.start_motion = 0
+
+        self.previous_objects = self.generate_state(objects)
+
+    def in_spot(self, new_obj, objects, hit_spots):
         center_x = new_obj["xmin"] + int((new_obj["xmax"] - new_obj["xmin"]) / 2)
         center_y = new_obj["ymin"] + int((new_obj["ymax"] - new_obj["ymin"]) / 2)
 
-        for obj in self.objects:
+        for obj in objects:
             (xmin, xmax, ymin, ymax) = obj["spot"]
 
             if xmin <= center_x <= xmax and ymin <= center_y <= ymax:
-                self.hit_spots.add(obj["spot"])
-                return True
+                hit_spots.add(obj["spot"])
+                break
 
-        return False
+        return hit_spots
 
     def calculate_spot(self, obj):
         return (
@@ -86,26 +119,30 @@ class ResponseReader(Thread):
 
     def run(self):
         it = 0
+        fr = 0
         while not self.stop:
             try:
                 (frame, objects) = self.response_queue.get(block=False)
+                fr += 1
             except queue.Empty:
                 time.sleep(0.1)
+                # print("Motion from {} to {} frame".format(self.object_state.start_motion, self.object_state.stop_motion))
                 continue
 
-            self.object_state.check_state(objects)
+            self.object_state.check_state(objects, fr)
 
-            if len(objects):
+            if self.object_state.start_motion > 0:
                 it += 1
                 origin_im_size = frame.shape[:-1]
-                for obj in objects:
-                    if obj['xmax'] > origin_im_size[1] or obj['ymax'] > origin_im_size[0] or obj['xmin'] < 0 or obj['ymin'] < 0:
-                        continue
-                    color = (int(min(obj['class_id'] * 12.5, 255)), min(obj['class_id'] * 7, 255), min(obj['class_id'] * 5, 255))
-                    det_label = str(obj['class_id'])
+                if len(objects) > 0:
+                    for obj in objects:
+                        if obj['xmax'] > origin_im_size[1] or obj['ymax'] > origin_im_size[0] or obj['xmin'] < 0 or obj['ymin'] < 0:
+                            continue
+                        color = (int(min(obj['class_id'] * 12.5, 255)), min(obj['class_id'] * 7, 255), min(obj['class_id'] * 5, 255))
+                        det_label = str(obj['class_id'])
 
-                    cv2.rectangle(frame, (obj['xmin'], obj['ymin']), (obj['xmax'], obj['ymax']), color, 2)
-                    cv2.putText(frame, det_label + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %', (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
+                        cv2.rectangle(frame, (obj['xmin'], obj['ymin']), (obj['xmax'], obj['ymax']), color, 2)
+                        cv2.putText(frame, det_label + ' ' + str(round(obj['confidence'] * 100, 1)) + ' %', (obj['xmin'], obj['ymin'] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
 
                 cv2.imwrite('frame{}.jpg'.format(it), frame)
 
