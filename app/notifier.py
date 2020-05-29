@@ -36,7 +36,7 @@ class Notifier(Thread):
 
     def send(self, message):
         try:
-            s = smtplib.SMTP(host=os.environ["NOTIFYING_MAIL_SERVER"], port=25, timeout=5)
+            s = smtplib.SMTP(host=os.environ["NOTIFYING_MAIL_SERVER"], port=25, timeout=10)
             s.send_message(message)
             s.quit()
         except Exception as e:

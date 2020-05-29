@@ -6,6 +6,7 @@ import pickledb
 
 from threading import Thread
 from api import Api
+from notifier import Notifier
 
 class ClipWriter(Thread):
     stop = False
@@ -57,9 +58,12 @@ class ClipWriter(Thread):
                 cv2.putText(frame, "{}, {}%".format(obj["category"], round(obj["confidence"] * 100, 1)), (obj["xmin"], obj["ymin"] - 7), cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
 
 
-        file_path = self.api.path(self.camera["name"], timestamp, "jpg")
+        file_path = self.api.path(self.camera["name"], timestamp, "jpeg")
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         cv2.imwrite(file_path, frame)
+
+        notifier = Notifier()
+        notifier.notify("Motion detected on camera {}".format(self.camera["name"]), [file_path])
 
     def save_meta(self, categories, timestamp):
         file_path = self.api.db_path(timestamp)
