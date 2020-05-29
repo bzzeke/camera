@@ -59,6 +59,7 @@ class ObjectDetector(Thread):
         while not self.stop:
             try:
                 (out_queue, frame, timestamp) = self.object_detector_queue.get(block=False)
+                log("[object_detector] Queue length: {}".format(self.object_detector_queue.qsize()))
             except queue.Empty:
                 time.sleep(0.01)
                 continue
