@@ -28,11 +28,11 @@ class Notifier(Thread):
         msg["To"] = os.environ["NOTIFY_EMAIL"]
 
         if len(self.attachments) > 0:
-            for filepath in self.attachments:
+            for filepath, name in self.attachments:
                 with open(filepath, "rb") as fp:
                     img_data = fp.read()
 
-                msg.add_attachment(img_data, maintype="image", subtype=imghdr.what(None, img_data))
+                msg.add_attachment(img_data, maintype="image", subtype=imghdr.what(None, img_data), filename=name)
 
         self.send(msg)
 

@@ -64,7 +64,7 @@ class ClipWriter(Thread):
         cv2.imwrite(file_path, frame)
 
         notifier = Notifier()
-        notifier.notify("Motion detected on camera {}".format(self.camera["name"]), [file_path])
+        notifier.notify("Motion detected on camera {}".format(self.camera["name"]), [(file_path, "{}_{}.jpeg".format(self.camera["name"], timestamp))])
 
     def save_meta(self, categories, timestamp):
         file_path = self.api.db_path(timestamp)
