@@ -46,7 +46,7 @@ class MotionDetector(Thread):
         self.object_processor.start()
 
     def run(self):
-        log("[phase1] [{}] Starting detector".format(self.camera["name"]))
+        log("[motion_detector] [{}] Starting detector".format(self.camera["name"]))
         ctx = zmq.Context()
         s = ctx.socket(zmq.SUB)
         s.connect("ipc:///tmp/streamer_%s" % self.camera["name"])

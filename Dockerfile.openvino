@@ -8,11 +8,6 @@ ENV MODEL_PACKAGE "http://download.tensorflow.org/models/object_detection/faster
 RUN	pip3 install --no-cache-dir numpy pyzmq	pickledb colorama
 RUN	pip3 install --no-cache-dir numba
 
-# Motion detector
-ADD build/motion_detector /tmp/motion_detector
-RUN cd /tmp/motion_detector && make
-RUN rm -fr /tmp/motion_detector
-
 ADD build/yolo-v2-ov /opt/model
 
 # Download model

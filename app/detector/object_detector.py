@@ -50,7 +50,7 @@ class ObjectDetector(Thread):
 
 
     def run(self):
-        log("[detector] Starting detector")
+        log("[object_detector] Starting detector")
 
         cur_request_id = 0
         input_blob = next(iter(self.net.inputs))

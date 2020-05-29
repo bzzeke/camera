@@ -1,15 +1,15 @@
-import os
 import time
 import sys
 import threading
-from threading import Thread, RLock
 import queue
+
 from util import import_env, log
+from threading import Thread, RLock
 
 from streamer import Streamer
 from api import ApiServer
-from phase1_detector_simple import Phase1Detector
-from phase2_detector_simple import Phase2Detector
+from motion_detector import MotionDetector
+from detector.object_detector import ObjectDetector
 from cleanup import Cleanup
 
 class State():
@@ -24,9 +24,9 @@ class State():
             self.cameras[camera["name"]] = camera
 
             if camera["detection"]:
-                phase1 = Phase1Detector(camera=camera, queue=self.q)
-                phase1.start()
-                self.threads.append(phase1)
+                motion_detector = MotionDetector(camera=camera, object_detector_queue=self.q)
+                motion_detector.start()
+                self.threads.append(motion_detector)
 
         finally:
             self.lock.release()
@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
     state = State()
 
-    object_detector = Phase2Detector(queue=state.q)
+    object_detector = ObjectDetector(object_detector_queue=state.q)
     object_detector.start()
 
     cleanup = Cleanup()
