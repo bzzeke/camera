@@ -4,8 +4,9 @@ import cv2
 import queue
 
 from threading import Thread
-from util import log
 from openvino.inference_engine import IENetwork, IECore
+
+from util import log
 from .yolo_params import YoloParams, intersection_over_union
 
 class ObjectDetector(Thread):
@@ -43,7 +44,7 @@ class ObjectDetector(Thread):
 
         self.net.batch_size = 1
 
-        with open(self.PATH_TO_LABELS, 'r') as f:
+        with open(self.PATH_TO_LABELS, "r") as f:
             self.labels_map = [x.strip() for x in f]
 
         self.exec_net = ie.load_network(network=self.net, num_requests=2, device_name=self.DEVICE)
@@ -84,17 +85,17 @@ class ObjectDetector(Thread):
 
     def filter_objects(self, objects):
 
-        objects = sorted(objects, key=lambda obj : obj['confidence'], reverse=True)
+        objects = sorted(objects, key=lambda obj : obj["confidence"], reverse=True)
 
         for i in range(len(objects)):
-            objects[i]["category"] = self.labels_map[objects[i]['class_id']]
-            if objects[i]['confidence'] == 0:
+            objects[i]["category"] = self.labels_map[objects[i]["class_id"]]
+            if objects[i]["confidence"] == 0:
                 continue
             for j in range(i + 1, len(objects)):
                 if intersection_over_union(objects[i], objects[j]) > self.IOU_THRESHOLD:
-                    objects[j]['confidence'] = 0
+                    objects[j]["confidence"] = 0
 
-        objects = [obj for obj in objects if obj['confidence'] >= self.PROB_THRESHOLD and obj["category"] in self.DETECTION_CATEGORIES]
+        objects = [obj for obj in objects if obj["confidence"] >= self.PROB_THRESHOLD and obj["category"] in self.DETECTION_CATEGORIES]
 
         return objects
 

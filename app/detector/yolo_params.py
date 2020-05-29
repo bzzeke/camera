@@ -2,15 +2,15 @@ from math import exp
 
 class YoloParams:
     def __init__(self, param, side):
-        self.num = 3 if 'num' not in param else int(param['num'])
-        self.coords = 4 if 'coords' not in param else int(param['coords'])
-        self.classes = 80 if 'classes' not in param else int(param['classes'])
+        self.num = 3 if "num" not in param else int(param["num"])
+        self.coords = 4 if "coords" not in param else int(param["coords"])
+        self.classes = 80 if "classes" not in param else int(param["classes"])
         self.side = side
-        self.anchors = [10.0, 13.0, 16.0, 30.0, 33.0, 23.0, 30.0, 61.0, 62.0, 45.0, 59.0, 119.0, 116.0, 90.0, 156.0, 198.0, 373.0, 326.0] if 'anchors' not in param else [float(a) for a in param['anchors'].split(',')]
+        self.anchors = [10.0, 13.0, 16.0, 30.0, 33.0, 23.0, 30.0, 61.0, 62.0, 45.0, 59.0, 119.0, 116.0, 90.0, 156.0, 198.0, 373.0, 326.0] if "anchors" not in param else [float(a) for a in param["anchors"].split(",")]
         self.isYoloV3 = False
 
-        if param.get('mask'):
-            mask = [int(idx) for idx in param['mask'].split(',')]
+        if param.get("mask"):
+            mask = [int(idx) for idx in param["mask"].split(",")]
             self.num = len(mask)
 
             maskedAnchors = []
@@ -79,14 +79,14 @@ class YoloParams:
 
 
 def intersection_over_union(box_1, box_2):
-    width_of_overlap_area = min(box_1['xmax'], box_2['xmax']) - max(box_1['xmin'], box_2['xmin'])
-    height_of_overlap_area = min(box_1['ymax'], box_2['ymax']) - max(box_1['ymin'], box_2['ymin'])
+    width_of_overlap_area = min(box_1["xmax"], box_2["xmax"]) - max(box_1["xmin"], box_2["xmin"])
+    height_of_overlap_area = min(box_1["ymax"], box_2["ymax"]) - max(box_1["ymin"], box_2["ymin"])
     if width_of_overlap_area < 0 or height_of_overlap_area < 0:
         area_of_overlap = 0
     else:
         area_of_overlap = width_of_overlap_area * height_of_overlap_area
-    box_1_area = (box_1['ymax'] - box_1['ymin']) * (box_1['xmax'] - box_1['xmin'])
-    box_2_area = (box_2['ymax'] - box_2['ymin']) * (box_2['xmax'] - box_2['xmin'])
+    box_1_area = (box_1["ymax"] - box_1["ymin"]) * (box_1["xmax"] - box_1["xmin"])
+    box_2_area = (box_2["ymax"] - box_2["ymin"]) * (box_2["xmax"] - box_2["xmin"])
     area_of_union = box_1_area + box_2_area - area_of_overlap
     if area_of_union == 0:
         return 0

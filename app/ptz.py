@@ -1,5 +1,6 @@
 from onvif import Onvif
 from xml.etree import ElementTree
+
 from util import log
 
 class PTZ():
@@ -52,14 +53,14 @@ class PTZ():
         response = self.onvif.getProfiles()
 
         namespaces = {
-            'soap': 'http://schemas.xmlsoap.org/soap/envelope/',
-            'trt': 'http://www.onvif.org/ver10/media/wsdl'
+            "soap": "http://schemas.xmlsoap.org/soap/envelope/",
+            "trt": "http://www.onvif.org/ver10/media/wsdl"
         }
         dom = ElementTree.fromstring(response)
 
         names = dom.findall(
-            './/trt:Profiles',
+            ".//trt:Profiles",
             namespaces,
         )
 
-        return names[0].attrib['token']
+        return names[0].attrib["token"]

@@ -5,6 +5,7 @@ import os
 import pickledb
 
 from threading import Thread
+
 from api import Api
 from notifier import Notifier
 
@@ -30,7 +31,7 @@ class ClipWriter(Thread):
                 file_path = self.api.path(self.camera["name"], self.writing, "mp4")
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-                fourcc = cv2.VideoWriter_fourcc('a', 'v', 'c', '1')
+                fourcc = cv2.VideoWriter_fourcc("a", "v", "c", "1")
                 out = cv2.VideoWriter(file_path, fourcc, self.camera["meta"]["fps"], (self.camera["meta"]["width"], self.camera["meta"]["height"]))
 
             if self.writing == 0 and out != None:

@@ -1,13 +1,12 @@
 import zmq
 import cv2
-from threading import Thread
 import numpy as np
-import os
-import glob
 import time
-from util import log
 import queue
 
+from threading import Thread
+
+from util import log
 from detector.clip_writer import ClipWriter
 from detector.object_processor import ObjectProcessor
 
@@ -60,7 +59,7 @@ class MotionDetector(Thread):
                 continue
 
             A = np.frombuffer(msg, dtype=self.camera["meta"]["dtype"])
-            frame = A.reshape(self.camera["meta"]['shape'])
+            frame = A.reshape(self.camera["meta"]["shape"])
             del A
 
             if self.current_frame_index % self.RATE == 0:

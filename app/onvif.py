@@ -5,16 +5,13 @@
 
 import datetime
 import base64
-from hashlib import sha1
 import argparse
-import logging
-from random import SystemRandom
 import string
 import base64
 import http.client
-from urllib.parse import urlparse
 
-logger = logging.getLogger(__name__)
+from hashlib import sha1
+from random import SystemRandom
 
 class Onvif():
 

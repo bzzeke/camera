@@ -1,19 +1,22 @@
 import cv2, sys
 import socket
 import time
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from socketserver import ThreadingMixIn
-import numpy, json
+import numpy
+import json
 import zmq
-from ptz import PTZ
 import os
 import copy
 import urllib, urllib.request
 import shutil, ssl, base64
 import re
-from datetime import date
 import pickledb
+
 from threading import Thread
+from datetime import date
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from socketserver import ThreadingMixIn
+
+from ptz import PTZ
 from util import log
 
 class Api:
@@ -65,7 +68,7 @@ class HTTPHandler(BaseHTTPRequestHandler):
         self.respond()
 
     def do_POST(self):
-        content_length = int(self.headers['Content-Length'])
+        content_length = int(self.headers["Content-Length"])
         request_body = self.rfile.read(content_length)
         self.respond(request_body.decode("utf-8"))
 
@@ -96,7 +99,7 @@ class ApiHandler(HTTPHandler):
 
     def snapshot(self, args):
         self.send_response(200)
-        self.send_header('Content-type', 'image/jpeg')
+        self.send_header("Content-type", "image/jpeg")
         self.end_headers()
         cam = args[0]
         if cam in self.server.state.cameras:
@@ -110,9 +113,9 @@ class ApiHandler(HTTPHandler):
                 msg = s.recv()
                 s.close()
                 A = numpy.frombuffer(msg, dtype=camera["meta"]["dtype"])
-                frame = A.reshape(camera["meta"]['shape'])
+                frame = A.reshape(camera["meta"]["shape"])
                 del A
-                ret, jpeg = cv2.imencode('.jpg', frame)
+                ret, jpeg = cv2.imencode(".jpg", frame)
                 return jpeg.tobytes()
 
             except Exception as e:
@@ -121,7 +124,7 @@ class ApiHandler(HTTPHandler):
 
     def ptz(self, args, body):
         self.send_response(200)
-        self.send_header('Content-type', 'application/json')
+        self.send_header("Content-type", "application/json")
         self.end_headers()
 
         cam = args[0]
@@ -142,7 +145,7 @@ class ApiHandler(HTTPHandler):
 
     def camera_list(self, args):
         self.send_response(200)
-        self.send_header('Content-type', 'application/json')
+        self.send_header("Content-type", "application/json")
         self.end_headers()
 
         cameras = []
@@ -162,7 +165,7 @@ class ApiHandler(HTTPHandler):
 
     def clips_list(self, args):
         self.send_response(200)
-        self.send_header('Content-type', 'application/json')
+        self.send_header("Content-type", "application/json")
         self.end_headers()
 
         api = Api()
@@ -209,7 +212,7 @@ class ApiHandler(HTTPHandler):
             return
 
         self.send_response(200)
-        self.send_header('Content-type', 'video/mp4')
+        self.send_header("Content-type", "video/mp4")
         self.download(filepath)
 
     def thumbnail(self, args):
@@ -221,16 +224,16 @@ class ApiHandler(HTTPHandler):
             return
 
         self.send_response(200)
-        self.send_header('Content-type', 'image/jpeg')
+        self.send_header("Content-type", "image/jpeg")
         self.download(filepath)
 
     def download(self, filepath):
-        with open(filepath, 'rb') as handle:
+        with open(filepath, "rb") as handle:
 
-            if 'Range' in self.headers:
+            if "Range" in self.headers:
                 self.download_range(handle)
             else:
-                self.send_header('Content-length', os.stat(filepath).st_size)
+                self.send_header("Content-length", os.stat(filepath).st_size)
                 self.end_headers()
                 try:
                     shutil.copyfileobj(handle, self.wfile)
@@ -274,7 +277,7 @@ class ApiHandler(HTTPHandler):
         if byte_range.strip() == "":
             return None, None
 
-        m = re.compile(r'bytes=(\d+)-(\d+)?$').match(byte_range)
+        m = re.compile(r"bytes=(\d+)-(\d+)?$").match(byte_range)
         if not m:
             return None, None
 

@@ -1,8 +1,10 @@
 import os
-from os.path import join, getsize
 import re
 import time
+
 from threading import Thread
+from os.path import join, getsize
+
 from util import log
 
 class Cleanup(Thread):
@@ -12,7 +14,7 @@ class Cleanup(Thread):
     clips_directory = ""
     period = 5 * 60 * 60 # seconds
     stop = False
-    regex = re.compile("/[0-9]\.(jpeg|mp4)/")
+    regex = re.compile("/[0-9]\\.(jpeg|mp4)/")
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None):
         super(Cleanup, self).__init__(group=group, target=target, name=name)

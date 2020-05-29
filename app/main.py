@@ -3,9 +3,9 @@ import sys
 import threading
 import queue
 
-from util import import_env, log
 from threading import Thread, RLock
 
+from util import import_env, log
 from streamer import Streamer
 from api import ApiServer
 from motion_detector import MotionDetector
