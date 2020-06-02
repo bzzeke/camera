@@ -18,6 +18,7 @@ class ObjectDetector(Thread):
     DEVICE = "CPU"
     PROB_THRESHOLD = 0.5
     IOU_THRESHOLD = 0.4
+    MAX_QUEUE_LENGTH = 5
 
     meta = {}
     labels_map = []
@@ -60,7 +61,10 @@ class ObjectDetector(Thread):
         while not self.stop:
             try:
                 (out_queue, frame, timestamp) = self.object_detector_queue.get(block=False)
-                log("[object_detector] Queue length: {}".format(self.object_detector_queue.qsize()))
+                if self.object_detector_queue.qsize() >= self.MAX_QUEUE_LENGTH:
+                    log("[object_detector] Queue length - {} is too big, clearing".format(self.object_detector_queue.qsize()))
+                    self.object_detector_queue.queue.clear()
+
             except queue.Empty:
                 time.sleep(0.01)
                 continue
