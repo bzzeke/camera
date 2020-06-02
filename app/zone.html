@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Camera zones</title>
+<script src="https://cdn.jsdelivr.net/d3js/3.5.9/d3.min.js"></script>
+
+<style>
+.img-overlay-wrap {
+  position: relative;
+  display: inline-block; /* <= shrinks container to image size */
+  transition: transform 150ms ease-in-out;
+}
+
+.img-overlay-wrap img { /* <= optional, for responsiveness */
+   display: block;
+   max-width: 100%;
+   height: auto;
+}
+
+.img-overlay-wrap svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+</style>
+</head>
+<body>
+<h3>Camera zones</h3>
+
+
+  <script>
+
+    var apiURL = "http://" + window.location.host + "/";
+    var polys = [];
+    var scaleFactor = 2;
+
+    function Poly(camera) {
+
+        this.closePolygon = function() {
+            self.svg.select('g.drawPoly').remove();
+            var g = self.svg.append('g');
+            g.append('polygon')
+                .attr('points', self.points)
+                .style('fill', self.getRandomColor())
+                .style('fill-opacity', 0.4);
+            for(var i = 0; i < self.points.length; i++) {
+                var circle = g.selectAll('circles')
+                    .data([self.points[i]])
+                    .enter()
+                    .append('circle')
+                    .attr('cx', self.points[i][0])
+                    .attr('cy', self.points[i][1])
+                    .attr('r', 4)
+                    .attr('fill', '#FDBC07')
+                    .attr('stroke', '#000')
+                    .attr('is-handle', 'true')
+                    .style({cursor: 'move'})
+                    .call(self.dragger);
+            }
+            self.points.splice(0);
+            self.drawing = false;
+            self.hasPolygon = true;
+        }
+
+        this.handleDrag = function() {
+            if(self.drawing) return;
+            var dragCircle = d3.select(this), newPoints = [], circle;
+            self.dragging = true;
+            var poly = d3.select(this.parentNode).select('polygon');
+            var circles = d3.select(this.parentNode).selectAll('circle');
+            dragCircle
+            .attr('cx', d3.event.x)
+            .attr('cy', d3.event.y);
+            for (var i = 0; i < circles[0].length; i++) {
+                circle = d3.select(circles[0][i]);
+                newPoints.push([circle.attr('cx'), circle.attr('cy')]);
+            }
+            poly.attr('points', newPoints);
+        }
+
+        this.getRandomColor = function() {
+            var letters = '0123456789ABCDEF'.split('');
+            var color = '#';
+            for (var i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        this.clearPoligon = function() {
+            self.svg.select('g').remove();
+            self.hasPolygon = false;
+        }
+
+        this.drawLine = function(point) {
+
+            self.startPoint = point;
+            if(self.svg.select('g.drawPoly').empty()) self.g = self.svg.append('g').attr('class', 'drawPoly');
+
+            self.points.push(point);
+            self.g.select('polyline').remove();
+            var polyline = self.g.append('polyline').attr('points', self.points)
+                .style('fill', 'none')
+                .attr('stroke', '#000');
+            for(var i = 0; i < self.points.length; i++) {
+                self.g.append('circle')
+                    .attr('cx', self.points[i][0])
+                    .attr('cy', self.points[i][1])
+                    .attr('r', 4)
+                    .attr('fill', 'yellow')
+                    .attr('stroke', '#000')
+                    .attr('is-handle', 'true')
+                    .style({cursor: 'pointer'});
+            }
+        }
+
+        this.getPoints = function() {
+            if (self.hasPolygon) {
+                return self.svg.select("g polygon").attr("points").split(",").map(p => parseInt(p));
+            }
+
+            return [];
+        }
+
+        this.toAbsolutePoints = function(points) {
+            return points.map(p => p * scaleFactor);
+        }
+
+        this.toScaledPoints = function(points) {
+            return points.map(p => parseInt(p / scaleFactor));
+        }
+
+        this.drawPoints = function(points) {
+            while (points.length > 0) {
+                x = points.shift();
+                y = points.shift();
+
+                self.drawLine([x, y]);
+            }
+
+            self.closePolygon();
+        }
+
+        this.savePoligon = function() {
+            var response = fetch(apiURL + "detection_zone/" + self.camera.name, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Origin': "http://localhost"
+                },
+                body: JSON.stringify({
+                    "zone": self.toAbsolutePoints(self.getPoints())
+                })
+            });
+        }
+
+
+        this.camera = camera;
+        this.hasPolygon = false;
+        this.dragging = false;
+        this.drawing = false;
+        this.startPoint = null;
+        this.svg = d3.select("#poly_" + camera.name)
+        this.points = [];
+        this.g = null
+        this.dragger = d3.behavior.drag()
+            .on('drag', this.handleDrag)
+            .on('dragend', function(d){
+                dragging = false;
+            });
+
+        var self = this;
+        this.clear_button = d3.select("#btn_clear_" + camera.name);
+        this.clear_button.on('click', function() {
+            self.clearPoligon();
+        });
+
+        this.save_button = d3.select("#btn_save_" + camera.name);
+        this.save_button.on('click', function() {
+            if (self.drawing == true) {
+                return;
+            }
+
+            self.savePoligon();
+        });
+
+        this.svg.on('mouseup', function(){
+            if(self.dragging || self.hasPolygon) return;
+            self.drawing = true;
+            var point = [d3.mouse(this)[0], d3.mouse(this)[1]];
+
+            if(d3.event.target.hasAttribute('is-handle')) {
+                self.closePolygon();
+                return;
+            };
+
+            self.drawLine(point);
+        });
+
+        this.svg.on('mousemove', function() {
+            if(!self.drawing) return;
+            var g = self .svg.select('g.drawPoly');
+            g.select('line').remove();
+            var line = g.append('line')
+                .attr('x1', self.startPoint[0])
+                .attr('y1', self.startPoint[1])
+                .attr('x2', d3.mouse(this)[0] + 2)
+                .attr('y2', d3.mouse(this)[1])
+                .attr('stroke', '#53DBF3')
+                .attr('stroke-width', 1);
+        });
+
+        if (this.camera.zone.length > 0) {
+            this.drawPoints(this.toScaledPoints(this.camera.zone));
+        }
+    }
+
+    function getCameras() {
+        fetch(apiURL + 'camera_list').then(function (response) {
+            return response.json();
+        }).then(function (data) {
+            if (data.status == "ok") {
+                for(var i = 0; i < data.results.length; i++) {
+                    createPreview(data.results[i]);
+                }
+            }
+        }).catch(function (err) {
+            console.warn('Something went wrong.', err);
+        });
+    }
+
+    function createPreview(camera) {
+
+        var width = parseInt(camera.meta.width / scaleFactor);
+        var height = parseInt(camera.meta.height / scaleFactor);
+
+        d3.select('body').append('div').attr("id", "wrap_" + camera.name).html('<div><button id="btn_clear_' + camera.name + '">Clear</button><button id="btn_save_' + camera.name + '">Save</button></div><div class="img-overlay-wrap"><img src="' + apiURL + 'snapshot/' + camera.name  + '" width="' + width + '" height="' + height + '"><svg id="poly_' + camera.name + '" viewBox="0 0 ' + width + ' ' + height + '"></svg></div>');
+
+        polys.push(new Poly(camera));
+    }
+
+    getCameras();
+
+    </script>
+
+</body>
+</html>
