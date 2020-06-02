@@ -5,6 +5,8 @@ import cv2
 from threading import Thread
 from shapely.geometry import Polygon
 
+from util import log
+
 class ObjectProcessor(Thread):
     stop = False
     response_queue = None
@@ -80,7 +82,7 @@ class SceneState():
 
     def stop_motion(self, timestamp):
         if self.motion > 0:
-            print("Motion recorded from {} to {} frame".format(self.motion, timestamp))
+            log("[processor] Motion recorded from {} to {} frame".format(self.motion, timestamp))
 
             self.clip_writer.save_meta(self.categories, self.motion)
             self.clip_writer.writing = 0
@@ -131,9 +133,10 @@ class SceneState():
 
     def convert_zone(self, zone):
         vertex = []
-        while len(zone) > 0:
-            x = zone.pop(0)
-            y = zone.pop(0)
+        new_zone = zone.copy()
+        while len(new_zone) > 0:
+            x = new_zone.pop(0)
+            y = new_zone.pop(0)
             vertex.append((x, y))
 
         return Polygon(vertex)

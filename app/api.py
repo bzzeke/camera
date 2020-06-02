@@ -164,12 +164,10 @@ class ApiHandler(HTTPHandler):
         data = json.loads(body)
         if "zone" in data:
             status = "ok"
-            db = pickledb.load("cameras.json", True, sig=False)
 
-            if not db.exists(cam):
-                db.dcreate(cam)
-
-            db.dadd(cam, ("zone", data["zone"]))
+            camera = self.server.state.cameras[cam]
+            camera["zone"] = data["zone"]
+            self.server.state.set_camera(camera)
 
         return json.dumps({
             "status": status
@@ -182,7 +180,6 @@ class ApiHandler(HTTPHandler):
         self.end_headers()
 
         cameras = []
-        db = pickledb.load("cameras.json", True, sig=False)
 
         for cam in self.server.state.cameras:
             camera = copy.deepcopy(self.server.state.cameras[cam])
@@ -190,11 +187,6 @@ class ApiHandler(HTTPHandler):
             del camera["meta"]["shape"]
             camera["name"] = cam
             camera["snapshot_url"] = "http://%s:%s/snapshot/%s" % (os.environ["API_SERVER_HOST"], os.environ["API_SERVER_PORT"], cam)
-            zone = []
-            if db.exists(cam) and db.dexists(cam, "zone"):
-                zone = db.dget(cam, "zone")
-            camera["zone"] = zone
-
             cameras.append(camera)
 
         return json.dumps({

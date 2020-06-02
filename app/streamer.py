@@ -3,9 +3,10 @@ import time
 import cv2
 import zmq
 import json
-from threading import Thread
 import os
-from urllib.parse import urlparse
+
+from threading import Thread
+
 from util import log
 
 class CameraStream(Thread):
@@ -73,40 +74,10 @@ class Streamer(Thread):
         super(Streamer, self).__init__(group=group, target=target, name=name)
         self.state = state
 
-    def get_cameras(self):
-        it = 0
-        cameras = {}
-        while "CAM_NAME_%i" % it in os.environ:
-            cameras[os.environ["CAM_NAME_%i" % it]] = {
-                "name": os.environ["CAM_NAME_%i" % it],
-                "url": os.environ["CAM_URL_%i" % it],
-                "detection": "CAM_DETECTION_%i" % it in os.environ,
-                "meta": {
-                    "dtype": None,
-                    "shape": None
-                }
-            }
-
-            if "CAM_ONVIF_%i" % it in os.environ:
-                parts = urlparse(os.environ["CAM_ONVIF_%i" % it])
-                cameras[os.environ["CAM_NAME_%i" % it]]["onvif"] = {
-                    "host": parts.hostname,
-                    "port": parts.port,
-                    "username": parts.username,
-                    "password": parts.password
-                }
-
-            if "CAM_PTZ_FEATURES_%i" % it in os.environ:
-                cameras[os.environ["CAM_NAME_%i" % it]]["ptz_features"] = os.environ["CAM_PTZ_FEATURES_%i" % it]
-
-            it += 1
-
-        return cameras.items()
-
     def run(self):
         log("[streamer] Starting service")
         threads = []
-        for cam, camera in self.get_cameras():
+        for cam, camera in self.state.cameras.items():
             thread = CameraStream(camera=camera, state=self.state)
             thread.start()
             threads.append(thread)

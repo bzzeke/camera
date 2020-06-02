@@ -48,7 +48,7 @@ class MotionDetector(Thread):
         log("[motion_detector] [{}] Starting detector".format(self.camera["name"]))
         ctx = zmq.Context()
         s = ctx.socket(zmq.SUB)
-        s.connect("ipc:///tmp/streamer_%s" % self.camera["name"])
+        s.connect("ipc:///tmp/streamer_{}".format(self.camera["name"]))
         s.setsockopt(zmq.SUBSCRIBE, b"")
         s.setsockopt(zmq.RCVTIMEO, 2000)
 
