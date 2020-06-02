@@ -3,10 +3,10 @@ import time
 import cv2
 
 from threading import Thread
+from shapely.geometry import Polygon
 
 class ObjectProcessor(Thread):
     stop = False
-    camera = {}
     response_queue = None
     scene_state = None
 
@@ -39,11 +39,15 @@ class SceneState():
     motion = 0
     start_timestamp = 0
     clip_writer = None
+    zone = None
 
     def __init__(self, clip_writer=None):
         self.clip_writer = clip_writer
+        self.zone = self.convert_zone(clip_writer.camera["zone"])
 
     def check_state(self, objects, frame, timestamp):
+        objects = list(filter(lambda obj: self.object_in_zone(obj) == True, objects))
+
         if self.objects == None:
             self.objects = self.generate_state(objects)
             return
@@ -124,3 +128,25 @@ class SceneState():
             state.append(new_obj)
 
         return state
+
+    def convert_zone(self, zone):
+        vertex = []
+        while len(zone) > 0:
+            x = zone.pop(0)
+            y = zone.pop(0)
+            vertex.append((x, y))
+
+        return Polygon(vertex)
+
+    def convert_object(self, obj):
+        return Polygon([(obj["xmin"], obj["ymin"]), (obj["xmax"], obj["ymin"]), (obj["xmax"], obj["ymax"]), (obj["xmin"], obj["ymax"])])
+
+    def object_in_zone(self, obj):
+        if self.zone.is_empty:
+            return True
+
+        if self.convert_object(obj).intersects(self.zone):
+            return True
+
+        return False
+
