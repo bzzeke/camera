@@ -9,6 +9,7 @@ from threading import Thread
 from util import log
 from detector.clip_writer import ClipWriter
 from detector.object_processor import ObjectProcessor
+from circular_queue import CircularQueue
 
 #
 #
@@ -18,6 +19,7 @@ from detector.object_processor import ObjectProcessor
 
 class MotionDetector(Thread):
     RATE = 10 # each N frame
+    CIRCULAR_BUFFER = 5 # seconds
 
     current_frame_index = 0
     stop = False
@@ -38,7 +40,7 @@ class MotionDetector(Thread):
         self.response_queue = queue.Queue()
         self.write_queue = queue.Queue()
 
-        self.clip_writer = ClipWriter(camera=camera, write_queue=self.write_queue)
+        self.clip_writer = ClipWriter(camera=camera, write_queue=self.write_queue, circular_queue=CircularQueue(max_size=camera["meta"]["fps"] * self.CIRCULAR_BUFFER))
         self.clip_writer.start()
 
         self.object_processor = ObjectProcessor(response_queue=self.response_queue, clip_writer=self.clip_writer)
@@ -62,6 +64,8 @@ class MotionDetector(Thread):
             frame = A.reshape(self.camera["meta"]["shape"])
             del A
 
+            self.clip_writer.circular_queue.put(frame)
+
             if self.current_frame_index % self.RATE == 0:
                 self.object_detector_queue.put((self.response_queue, frame, int(time.time())))
 
@@ -76,4 +80,5 @@ class MotionDetector(Thread):
 
         self.clip_writer.stop = True
         self.clip_writer.join()
+
 
