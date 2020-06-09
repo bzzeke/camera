@@ -66,6 +66,7 @@ class ClipWriter(Thread):
         fontface = cv2.FONT_HERSHEY_COMPLEX
         scale = 0.6
         thickness = 1
+        labels = []
 
         if len(objects) > 0:
             for obj in objects:
@@ -74,6 +75,7 @@ class ClipWriter(Thread):
 
                 cv2.rectangle(snapshot_frame, (obj["xmin"], obj["ymin"]), (obj["xmax"], obj["ymax"]), self.COLOR, 2)
 
+                labels.append(obj["category"])
                 label = "{}, {}%".format(obj["category"], round(obj["confidence"] * 100, 1))
                 (text_width, text_height) = cv2.getTextSize(label, fontface, fontScale=scale, thickness=thickness)[0]
                 text_offset_x = obj["xmin"]
@@ -89,7 +91,7 @@ class ClipWriter(Thread):
         del snapshot_frame
 
         notifier = Notifier()
-        notifier.notify("Motion detected on camera {}".format(self.camera["name"]), [(file_path, "{}_{}.jpeg".format(self.camera["name"], timestamp))])
+        notifier.notify("Motion detected on camera {}: {}, frame size: {}".format(self.camera["name"], ", ".join(labels), frame.nbytes), [(file_path, "{}_{}.jpeg".format(self.camera["name"], timestamp))])
 
     def save_meta(self, categories, timestamp):
         file_path = self.api.db_path(timestamp)
