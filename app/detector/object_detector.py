@@ -30,7 +30,7 @@ class ObjectDetector(Thread):
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, object_detector_queue=None):
         super(ObjectDetector, self).__init__(group=group, target=target, name=name)
         self.PATH_TO_MODEL = os.environ["MODEL_PATH"]
-        self.PATH_TO_LABELS = os.path.dirname(self.PATH_TO_MODEL) + "/coco_classes.txt"
+        self.PATH_TO_LABELS = os.path.dirname(self.PATH_TO_MODEL) + "/classes.txt"
         self.DEVICE = os.environ["INFERENCE_DEVICE"]
         self.object_detector_queue = object_detector_queue
 
@@ -54,7 +54,6 @@ class ObjectDetector(Thread):
     def run(self):
         log("[object_detector] Starting detector")
 
-        cur_request_id = 0
         input_blob = next(iter(self.net.inputs))
         n, c, h, w = self.net.inputs[input_blob].shape
 
@@ -69,20 +68,18 @@ class ObjectDetector(Thread):
                 time.sleep(0.01)
                 continue
 
-            request_id = cur_request_id
             in_frame = cv2.resize(frame, (w, h))
             in_frame = in_frame.transpose((2, 0, 1))  # Change data layout from HWC to CHW
             in_frame = in_frame.reshape((n, c, h, w))
 
-            self.exec_net.start_async(request_id=request_id, inputs={input_blob: in_frame})
-
+            s = time.time()
+            output = self.exec_net.infer(inputs={input_blob: in_frame})
+            print("Processed for {}s".format(time.time() - s))
             objects = list()
-            if self.exec_net.requests[cur_request_id].wait(-1) == 0:
-                output = self.exec_net.requests[cur_request_id].outputs
-                for layer_name, out_blob in output.items():
-                    out_blob = out_blob.reshape(self.net.layers[self.net.layers[layer_name].parents[0]].out_data[0].shape)
-                    layer_params = YoloParams(self.net.layers[layer_name].params, out_blob.shape[2])
-                    objects += layer_params.parse_yolo_region(out_blob, in_frame.shape[2:], frame.shape[:-1], self.PROB_THRESHOLD)
+            for layer_name, out_blob in output.items():
+                out_blob = out_blob.reshape(self.net.layers[self.net.layers[layer_name].parents[0]].out_data[0].shape)
+                layer_params = YoloParams(self.net.layers[layer_name].params, out_blob.shape[2])
+                objects += layer_params.parse_yolo_region(out_blob, in_frame.shape[2:], frame.shape[:-1], self.PROB_THRESHOLD)
 
             objects = self.filter_objects(objects)
             out_queue.put((frame, timestamp, objects))
