@@ -5,15 +5,7 @@ USER root
 ENV DEBIAN_FRONTEND "noninteractive"
 RUN	pip3 install --no-cache-dir numpy pyzmq	pickledb shapely
 
-ADD build/yolo-v2-ov /opt/model
-# RUN chmod 755 /app/run.sh
-
-# Download model
-# RUN	mkdir /opt/model && \
-# 	cd /opt/model && \
-# 	curl -SL -o model.tgz -O ${MODEL_PACKAGE} && \
-# 	tar --strip-components=1 -zxf model.tgz && \
-# 	rm -f model.tgz
+RUN mkdir /srv/models && chmod 777 /srv/models
 
 WORKDIR /app
 VOLUME /app
