@@ -3,12 +3,10 @@ FROM openvino/ubuntu18_runtime:latest
 USER root
 
 ENV DEBIAN_FRONTEND "noninteractive"
-ENV MODEL_PACKAGE "http://download.tensorflow.org/models/object_detection/faster_rcnn_inception_v2_coco_2018_01_28.tar.gz"
-
-RUN	pip3 install --no-cache-dir numpy pyzmq	pickledb colorama
-RUN	pip3 install --no-cache-dir numba
+RUN	pip3 install --no-cache-dir numpy pyzmq	pickledb shapely
 
 ADD build/yolo-v2-ov /opt/model
+# RUN chmod 755 /app/run.sh
 
 # Download model
 # RUN	mkdir /opt/model && \
@@ -20,4 +18,4 @@ ADD build/yolo-v2-ov /opt/model
 WORKDIR /app
 VOLUME /app
 
-CMD ["python3", "-u", "/app/main.py"]
+CMD ["/app/run.sh"]
