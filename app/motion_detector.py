@@ -21,12 +21,10 @@ class MotionDetector(Thread):
     RATE = 10 # each N frame
     CIRCULAR_BUFFER = 5 # seconds
 
-    current_frame_index = 0
     stop = False
     camera = {}
 
     response_queue = None
-    write_queue = None
     object_detector_queue = None
 
     object_processor = None
@@ -38,9 +36,8 @@ class MotionDetector(Thread):
 
         self.object_detector_queue = object_detector_queue
         self.response_queue = queue.Queue()
-        self.write_queue = queue.Queue()
 
-        self.clip_writer = ClipWriter(camera=camera, write_queue=self.write_queue, circular_queue=CircularQueue(max_size=camera["meta"]["fps"] * self.CIRCULAR_BUFFER))
+        self.clip_writer = ClipWriter(camera=camera, circular_queue=CircularQueue(max_size=camera["meta"]["fps"] * self.CIRCULAR_BUFFER))
         self.clip_writer.start()
 
         self.object_processor = ObjectProcessor(response_queue=self.response_queue, clip_writer=self.clip_writer)
@@ -53,6 +50,7 @@ class MotionDetector(Thread):
         s.connect("ipc:///tmp/streamer_{}".format(self.camera["name"]))
         s.setsockopt(zmq.SUBSCRIBE, b"")
         s.setsockopt(zmq.RCVTIMEO, 2000)
+        frame_idx = 0
 
         while not self.stop:
             try:
@@ -63,16 +61,12 @@ class MotionDetector(Thread):
             A = np.frombuffer(msg, dtype=self.camera["meta"]["dtype"])
             frame = A.reshape(self.camera["meta"]["shape"])
             del A
-
+            frame_idx += 1
             self.clip_writer.circular_queue.put(frame)
 
-            if self.current_frame_index % self.RATE == 0:
+            if frame_idx % self.RATE == 0:
                 self.object_detector_queue.put((self.response_queue, frame, int(time.time())))
-
-            if self.clip_writer.writing > 0:
-                self.write_queue.put(frame)
-
-            self.current_frame_index += 1
+                frame_idx = 0
 
         s.close()
         self.object_processor.stop = True

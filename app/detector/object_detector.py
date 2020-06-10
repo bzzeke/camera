@@ -72,9 +72,8 @@ class ObjectDetector(Thread):
             in_frame = in_frame.transpose((2, 0, 1))  # Change data layout from HWC to CHW
             in_frame = in_frame.reshape((n, c, h, w))
 
-            s = time.time()
             output = self.exec_net.infer(inputs={input_blob: in_frame})
-            print("Processed for {}s".format(time.time() - s))
+
             objects = list()
             for layer_name, out_blob in output.items():
                 out_blob = out_blob.reshape(self.net.layers[self.net.layers[layer_name].parents[0]].out_data[0].shape)

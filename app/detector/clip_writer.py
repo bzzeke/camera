@@ -15,15 +15,13 @@ class ClipWriter(Thread):
     COLOR = (153, 255, 51)
     stop = False
     camera = None
-    write_queue = None
     circular_queue = None
     writing = 0
     api = Api()
 
-    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera=None, write_queue=None, circular_queue=None):
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera=None, circular_queue=None):
         super(ClipWriter, self).__init__(group=group, target=target, name=name)
         self.camera = camera
-        self.write_queue = write_queue
         self.circular_queue = circular_queue
 
     def run(self):
@@ -33,31 +31,26 @@ class ClipWriter(Thread):
 
             if self.writing > 0 and out == None:
 
+                self.circular_queue.drop = False
                 file_path = self.api.path(self.camera["name"], self.writing, "mp4")
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
                 fourcc = cv2.VideoWriter_fourcc("a", "v", "c", "1")
                 out = cv2.VideoWriter(file_path, fourcc, self.camera["meta"]["fps"], (self.camera["meta"]["width"], self.camera["meta"]["height"]))
 
-                current_size = self.circular_queue.size()
-                i = 0
-                while i < current_size:
-                    i+= 1
-                    out.write(self.circular_queue.get())
-
             if self.writing == 0 and out != None:
                 out.release()
                 out = None
+                self.circular_queue.drop = True
 
-            try:
-                frame = self.write_queue.get(block=False)
-            except queue.Empty:
+            if self.writing > 0:
+                frame = self.circular_queue.get()
+            else:
                 time.sleep(0.01)
                 continue
 
             if out:
                 out.write(frame)
-
 
     def make_snapshot(self, objects, frame, timestamp):
 
