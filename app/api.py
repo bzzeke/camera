@@ -10,9 +10,9 @@ import urllib, urllib.request
 import shutil, ssl, base64
 import re
 import pickledb
+import datetime as dt
 
 from threading import Thread
-from datetime import date
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
 
@@ -49,11 +49,11 @@ class Api:
         return False
 
     def db_path(self, timestamp):
-        clip_date = date.fromtimestamp(timestamp)
+        clip_date = dt.date.fromtimestamp(timestamp)
         return "{}/{}/{}/{}/meta.json".format(os.environ["DETECTOR_STORAGE_PATH"], clip_date.year, clip_date.month, clip_date.day)
 
     def path(self, camera, timestamp, ext):
-        clip_date = date.fromtimestamp(timestamp)
+        clip_date = dt.date.fromtimestamp(timestamp)
         return "{}/{}/{}/{}/{}/{}.{}".format(os.environ["DETECTOR_STORAGE_PATH"], clip_date.year, clip_date.month, clip_date.day, camera, timestamp, ext)
 
 class ApiHTTPServer(ThreadingMixIn, HTTPServer):
@@ -201,11 +201,15 @@ class ApiHandler(HTTPHandler):
 
         api = Api()
         # format: /clips_list
-        # format: /clips_list/Any camera/All objects/182234644
+        # format: /clips_list/Any camera/All objects/20200620
         # format: /clips_list/Any camera/person
         camera = args[0] if len(args) >= 1 else ""
         rule = args[1] if len(args) >= 2 else ""
-        date = int(args[2]) if len(args) >= 3 else int(time.time())
+        date = int(time.time())
+        if len(args) >=3:
+            date_str = str(args[2])
+            ts = dt.datetime(year=int(date_str[:4]), month=int(date_str[4:6]), day=int(date_str[6:]))
+            date = int(time.mktime(ts.timetuple()))
 
         if camera == "Any camera":
             camera = ""
