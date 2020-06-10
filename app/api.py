@@ -120,10 +120,7 @@ class ApiHandler(HTTPHandler):
                 del A
 
                 if len(args) == 2:
-                    (h, w) = frame.shape[:2]
-                    new_width = int(args[1])
-                    new_height = int(new_width * h / float(w))
-                    frame = cv2.resize(frame, (new_width, new_height), interpolation=cv2.INTER_AREA)
+                    frame = self.resize_image(frame, int(args[1]))
 
                 ret, jpeg = cv2.imencode(".jpg", frame)
                 return jpeg.tobytes()
@@ -267,7 +264,15 @@ class ApiHandler(HTTPHandler):
 
         self.send_response(200)
         self.send_header("Content-type", "image/jpeg")
-        self.download(filepath)
+
+        if len(args) == 3:
+            self.end_headers()
+            frame = cv2.imread(filepath)
+            frame = self.resize_image(frame, int(args[2]))
+            ret, jpeg = cv2.imencode(".jpg", frame)
+            return jpeg.tobytes()
+        else:
+            self.download(filepath)
 
     def download(self, filepath):
         with open(filepath, "rb") as handle:
@@ -340,6 +345,11 @@ class ApiHandler(HTTPHandler):
             )
 
         return url
+
+    def resize_image(self, image, new_width):
+        (h, w) = image.shape[:2]
+        new_height = int(new_width * h / float(w))
+        return cv2.resize(image, (new_width, new_height), interpolation=cv2.INTER_AREA)
 
 
 class ApiServer(Thread):
