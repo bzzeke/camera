@@ -118,6 +118,13 @@ class ApiHandler(HTTPHandler):
                 A = numpy.frombuffer(msg, dtype=camera["meta"]["dtype"])
                 frame = A.reshape(camera["meta"]["shape"])
                 del A
+
+                if len(args) == 2:
+                    (h, w) = frame.shape[:2]
+                    new_width = int(args[1])
+                    new_height = int(new_width * h / float(w))
+                    frame = cv2.resize(frame, (new_width, new_height), interpolation=cv2.INTER_AREA)
+
                 ret, jpeg = cv2.imencode(".jpg", frame)
                 return jpeg.tobytes()
 
