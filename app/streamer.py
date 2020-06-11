@@ -40,7 +40,7 @@ class CameraStream(Thread):
             (grabbed, frame) = video.read()
 
             if not grabbed:
-                log("[streamer] [{}] Reconnecting to camera".format(self.camera["name"]))
+                # log("[streamer] [{}] Reconnecting to camera".format(self.camera["name"]))
                 video.release()
                 video = self.get_capture(self.camera["url"])
                 time.sleep(5)

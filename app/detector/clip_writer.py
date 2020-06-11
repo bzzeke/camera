@@ -9,6 +9,7 @@ from threading import Thread
 
 from api import Api
 from notifier import Notifier
+from util import log
 
 class ClipWriter(Thread):
 
@@ -16,8 +17,9 @@ class ClipWriter(Thread):
     stop = False
     camera = None
     circular_queue = None
-    writing = 0
+    start_timestamp = 0
     api = Api()
+    categories = []
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera=None, circular_queue=None):
         super(ClipWriter, self).__init__(group=group, target=target, name=name)
@@ -27,23 +29,27 @@ class ClipWriter(Thread):
     def run(self):
 
         out = None
+        last_timestamp = 0
         while not self.stop:
 
-            if self.writing > 0 and out == None:
-
+            if self.start_timestamp > 0 and out == None:
+                last_timestamp = self.start_timestamp
+                self.categories = []
                 self.circular_queue.drop = False
-                file_path = self.api.path(self.camera["name"], self.writing, "mp4")
+                file_path = self.api.path(self.camera["name"], self.start_timestamp, "mp4")
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
                 fourcc = cv2.VideoWriter_fourcc("a", "v", "c", "1")
                 out = cv2.VideoWriter(file_path, fourcc, self.camera["meta"]["fps"], (self.camera["meta"]["width"], self.camera["meta"]["height"]))
 
-            if self.writing == 0 and out != None:
+            if self.start_timestamp == 0 and out != None:
                 out.release()
                 out = None
+                self.finish_clip(last_timestamp)
+                last_timestamp = 0
                 self.circular_queue.drop = True
 
-            if self.writing > 0:
+            if self.start_timestamp > 0:
                 frame = self.circular_queue.get()
             else:
                 time.sleep(0.01)
@@ -51,6 +57,14 @@ class ClipWriter(Thread):
 
             if out:
                 out.write(frame)
+
+    def finish_clip(self, timestamp):
+        file_path = self.api.path(self.camera["name"], timestamp, "jpeg")
+        if os.path.isfile(file_path):
+            self.save_meta(self.categories, timestamp)
+        else:
+            log("[clip writer] Cleanup flickering for timestamp {}".format(timestamp))
+            self.cleanup(timestamp)
 
     def make_snapshot(self, objects, frame, timestamp):
 
@@ -84,7 +98,7 @@ class ClipWriter(Thread):
         del snapshot_frame
 
         notifier = Notifier()
-        notifier.notify("Motion detected on camera {}: {}, frame size: {}".format(self.camera["name"], ", ".join(labels), frame.nbytes), [(file_path, "{}_{}.jpeg".format(self.camera["name"], timestamp))])
+        notifier.notify("Motion detected on camera {}: {}".format(self.camera["name"], ", ".join(labels)), [(file_path, "{}_{}.jpeg".format(self.camera["name"], timestamp))])
 
     def save_meta(self, categories, timestamp):
         file_path = self.api.db_path(timestamp)
@@ -99,6 +113,11 @@ class ClipWriter(Thread):
             "start_time": timestamp,
             "objects": list(categories)
         })
+
+    def cleanup(self, timestamp):
+        file_path = self.api.path(self.camera["name"], timestamp, "mp4")
+        os.remove(file_path)
+
 
 
 

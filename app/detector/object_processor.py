@@ -36,9 +36,7 @@ class SceneState():
 
     categories = set()
     objects = None
-    previous_objects = None
     stale_counter = 0
-    motion = 0
     start_timestamp = 0
     clip_writer = None
     zone = None
@@ -63,6 +61,7 @@ class SceneState():
 
             if len(hit_spots) != len(self.objects):
                 self.start_motion(objects, frame, timestamp)
+                self.clip_writer.make_snapshot(objects, frame, self.start_timestamp)
             else:
                 self.stale_counter += 1
 
@@ -75,19 +74,18 @@ class SceneState():
 
     def start_motion(self, objects, frame, timestamp):
         self.stale_counter = 0
-        if self.motion == 0:
-            self.motion = timestamp
-            self.clip_writer.writing = timestamp
-            self.clip_writer.make_snapshot(objects, frame, timestamp)
+        if self.start_timestamp == 0:
+            self.start_timestamp = timestamp
+            self.clip_writer.start_timestamp = timestamp
 
     def stop_motion(self, timestamp):
-        if self.motion > 0:
-            log("[processor] Motion recorded from {} to {} frame".format(self.motion, timestamp))
+        if self.start_timestamp > 0:
+            log("[processor] Motion recorded from {} to {} frame".format(self.start_timestamp, timestamp))
 
-            self.clip_writer.save_meta(self.categories, self.motion)
-            self.clip_writer.writing = 0
-            self.motion = 0
+            self.clip_writer.categories = self.categories
+            self.clip_writer.start_timestamp = 0
             self.categories = set()
+            self.start_timestamp = 0
 
     def in_spot(self, new_obj, objects, hit_spots):
         center_x = new_obj["xmin"] + int((new_obj["xmax"] - new_obj["xmin"]) / 2)
