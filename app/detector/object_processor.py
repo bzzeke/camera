@@ -61,7 +61,6 @@ class SceneState():
 
             if len(hit_spots) != len(self.objects):
                 self.start_motion(objects, frame, timestamp)
-                self.clip_writer.make_snapshot(objects, frame, self.start_timestamp)
             else:
                 self.stale_counter += 1
 
@@ -77,6 +76,7 @@ class SceneState():
         if self.start_timestamp == 0:
             self.start_timestamp = timestamp
             self.clip_writer.start_timestamp = timestamp
+            self.clip_writer.make_snapshot(objects, frame, timestamp)
 
     def stop_motion(self, timestamp):
         if self.start_timestamp > 0:
