@@ -13,6 +13,11 @@ class CameraStream(Thread):
     camera = {}
     state = None
 
+    ts_pregrab = 0
+    ts_postgrab = 0
+    ts_prezmq = 0
+    ts_postzmq = 0
+
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera=None, state=None):
         super(CameraStream, self).__init__(group=group, target=target, name=name)
         self.camera = camera
@@ -37,7 +42,9 @@ class CameraStream(Thread):
             if self.stop:
                 break
 
+            self.ts_pregrab = time.time()
             (grabbed, frame) = video.read()
+            self.ts_postgrab = time.time()
 
             if not grabbed:
                 # log("[streamer] [{}] Reconnecting to camera".format(self.camera["name"]))
@@ -54,7 +61,9 @@ class CameraStream(Thread):
                 self.camera["meta"]["fps"] = int(video.get(cv2.CAP_PROP_FPS))
                 self.set_meta()
 
+            self.ts_prezmq = time.time()
             s.send(frame)
+            self.ts_postzmq = time.time()
             del frame
         s.close()
 
@@ -84,9 +93,15 @@ class Streamer(Thread):
 
         while not self.stop:
             time.sleep(1)
+            self.watch_stream(threads)
 
         for thread in threads:
             thread.stop = True
             thread.join()
 
+    def watch_stream(self, threads):
+        TIMEOUT = 20
+        for thread in threads:
+            if time.time() - thread.ts_pregrab > TIMEOUT:
+                log("[streamer] Looks like thread is hang up: {} - {}, {}, {}, {}".format(thread.camera["name"], thread.ts_pregrab, thread.ts_postgrab, thread.ts_prezmq, thread.ts_postzmq))
 
