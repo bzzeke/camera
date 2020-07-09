@@ -63,7 +63,7 @@ class SceneState():
             if len(hit_spots) != len(self.objects):
                 self.start_motion(objects, frame, timestamp)
                 if self.has_snapshot == False:
-                    self.clip_writer.make_snapshot(objects, frame, timestamp)
+                    self.clip_writer.make_snapshot(objects, frame, self.start_timestamp)
                     self.has_snapshot = True
             else:
                 self.stale_counter += 1
