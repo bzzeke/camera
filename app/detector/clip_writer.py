@@ -16,6 +16,7 @@ class ClipWriter(Thread):
     COLOR = (153, 255, 51)
     stop = False
     camera = None
+    notifier = Notifier()
     circular_queue = None
     start_timestamp = 0
     api = Api()
@@ -25,6 +26,7 @@ class ClipWriter(Thread):
         super(ClipWriter, self).__init__(group=group, target=target, name=name)
         self.camera = camera
         self.circular_queue = circular_queue
+        self.notifier.start()
 
     def run(self):
 
@@ -57,6 +59,9 @@ class ClipWriter(Thread):
 
             if out:
                 out.write(frame)
+
+        self.notifier.stop = True
+        self.notifier.join()
 
     def finish_clip(self, timestamp):
         file_path = self.api.path(self.camera["name"], timestamp, "jpeg")
@@ -97,8 +102,7 @@ class ClipWriter(Thread):
         cv2.imwrite(file_path, snapshot_frame)
         del snapshot_frame
 
-        notifier = Notifier()
-        notifier.notify("Motion detected on camera {}: {}".format(self.camera["name"], ", ".join(labels)), [(file_path, "{}_{}.jpeg".format(self.camera["name"], timestamp))])
+        self.notifier.notify("Motion detected on camera {}: {}".format(self.camera["name"], ", ".join(labels)), [(file_path, [self.camera["name"], timestamp])])
 
     def save_meta(self, categories, timestamp):
         file_path = self.api.db_path(timestamp)

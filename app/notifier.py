@@ -1,45 +1,62 @@
 import smtplib
 import imghdr
 import os
+import requests
+import base64
+import queue
+import time
 
-from email.message import EmailMessage
 from threading import Thread
 
 from util import log
 
 class Notifier(Thread):
-    message = ""
-    attachments = []
+    queue = queue.Queue()
+    stop = False
 
     def notify(self, message, attachments = []):
 
         if "CAMERA_DISABLE_NOTIFICATIONS" in os.environ:
             return
 
-        self.message = message
-        self.attachments = attachments
-        self.start()
+        self.queue.put((message, attachments))
 
     def run(self):
-        msg = EmailMessage()
-        msg.set_content(self.message)
-        msg["Subject"] = "Alert"
-        msg["From"] = os.environ["FROM_EMAIL"]
-        msg["To"] = os.environ["NOTIFY_EMAIL"]
+        while not self.stop:
+            try:
+                (message, attachments) = self.queue.get(block=False)
+                self.send(message, attachments)
+            except queue.Empty:
+                time.sleep(0.1)
+                continue
 
-        if len(self.attachments) > 0:
-            for filepath, name in self.attachments:
-                with open(filepath, "rb") as fp:
-                    img_data = fp.read()
+    def send(self, message, attachments):
 
-                msg.add_attachment(img_data, maintype="image", subtype=imghdr.what(None, img_data), filename=name)
-
-        self.send(msg)
-
-    def send(self, message):
         try:
-            s = smtplib.SMTP(host=os.environ["NOTIFYING_MAIL_SERVER"], port=25, timeout=10)
-            s.send_message(message)
-            s.quit()
+            payload = {
+                "text": message,
+                "attachments": [],
+                "meta": {
+                    "surveillance": []
+                }
+            }
+
+            if len(attachments) > 0:
+                for filepath, meta in attachments:
+                    with open(filepath, "rb") as fp:
+                        img_data = fp.read()
+
+                    payload["attachments"].append(base64.b64encode(img_data).decode())
+                    payload["meta"]["surveillance"].append(meta)
+
+            r = requests.post(os.environ["NOTIFY_URL"], json=payload)
+
+            if r.status_code != 200:
+                try:
+                    error = r.json()
+                    log("[notifier] Failed to send message {}: {}".format(message, error["error"]))
+                except Exception as e:
+                    log("[notifier] Failed to send message {}: {}".format(message, r.status_code))
+
         except Exception as e:
-            log("[notifier] Failed to send email: %s" % str(e))
+            log("[notifier] Failed to send message {}: {}".format(message, str(e)))
