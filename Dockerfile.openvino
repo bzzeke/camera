@@ -3,7 +3,7 @@ FROM openvino/ubuntu18_runtime:latest
 USER root
 
 ENV DEBIAN_FRONTEND "noninteractive"
-RUN	pip3 install --no-cache-dir numpy pyzmq	pickledb shapely
+RUN	pip3 install --no-cache-dir numpy pyzmq	pickledb shapely requests
 
 RUN mkdir /srv/models && chmod 777 /srv/models
 
