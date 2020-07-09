@@ -12,6 +12,7 @@ from util import log
 class CameraStream(Thread):
     camera = {}
     state = None
+    video = None
 
     ts_pregrab = 0
     ts_postgrab = 0
@@ -30,7 +31,7 @@ class CameraStream(Thread):
         self.state.set_camera(self.camera)
 
     def run(self):
-        video = self.get_capture(self.camera["url"])
+        self.video = self.get_capture(self.camera["url"])
 
         log("[streamer] [{}] Starting stream".format(self.camera["name"]))
 
@@ -43,22 +44,22 @@ class CameraStream(Thread):
                 break
 
             self.ts_pregrab = time.time()
-            (grabbed, frame) = video.read()
+            (grabbed, frame) = self.video.read()
             self.ts_postgrab = time.time()
 
             if not grabbed:
                 # log("[streamer] [{}] Reconnecting to camera".format(self.camera["name"]))
-                video.release()
-                video = self.get_capture(self.camera["url"])
+                self.video.release()
+                self.video = self.get_capture(self.camera["url"])
                 time.sleep(5)
                 continue
 
             if self.camera["meta"]["dtype"] == None:
                 self.camera["meta"]["dtype"] = str(frame.dtype)
                 self.camera["meta"]["shape"] = frame.shape
-                self.camera["meta"]["width"] = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
-                self.camera["meta"]["height"] = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                self.camera["meta"]["fps"] = int(video.get(cv2.CAP_PROP_FPS))
+                self.camera["meta"]["width"] = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
+                self.camera["meta"]["height"] = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                self.camera["meta"]["fps"] = int(self.video.get(cv2.CAP_PROP_FPS))
                 self.set_meta()
 
             self.ts_prezmq = time.time()
@@ -70,7 +71,7 @@ class CameraStream(Thread):
     def get_capture(self, url):
         if os.environ["CAPTURER_TYPE"] == "gstreamer":
             decoder = "avdec_h264" if os.environ["CAPTURER_HARDWARE"] == "cpu" else "vaapidecodebin"
-            return cv2.VideoCapture('rtspsrc location="{}" latency=0 ! rtph264depay ! h264parse ! {} ! videoconvert ! appsink'.format(url, decoder), cv2.CAP_GSTREAMER)
+            return cv2.VideoCapture('rtspsrc location="{}" latency=0 protocols=GST_RTSP_LOWER_TRANS_TCP ! rtph264depay ! h264parse ! {} ! videoconvert ! appsink'.format(url, decoder), cv2.CAP_GSTREAMER)
         else:
             return cv2.VideoCapture(url)
 
@@ -104,4 +105,5 @@ class Streamer(Thread):
         for thread in threads:
             if time.time() - thread.ts_pregrab > TIMEOUT:
                 log("[streamer] Looks like thread is hang up: {} - {}, {}, {}, {}".format(thread.camera["name"], thread.ts_pregrab, thread.ts_postgrab, thread.ts_prezmq, thread.ts_postzmq))
+                thread.video.release()
 
