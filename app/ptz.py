@@ -4,13 +4,17 @@ from xml.etree import ElementTree
 from util import log
 
 class PTZ():
-    XMAX = 1
-    XMIN = -1
-    YMAX = 1
-    YMIN = -1
-    ZMIN = -1
-    ZMAX = 1
+
+    directions = {
+        "zoom_in": [1],
+        "zoom_out": [-1],
+        "move_up": [0, 1],
+        "move_down": [0, -1],
+        "move_left": [-1, 0],
+        "move_right": [1, 0],
+    }
     onvif = None
+
 
     def __init__(self, camera):
         self.onvif = Onvif()
@@ -18,36 +22,12 @@ class PTZ():
         self.onvif.setAuth(camera["username"], camera["password"])
         self.onvif.setProfileToken(self.get_profile_token())
 
-    def zoom_in(self):
-        log("[ptz] zoom in...")
-        self.onvif.continuousZoom(self.ZMAX)
-
-    def zoom_out(self, cam):
-        log("[ptz] zoom out...")
-        self.onvif.continuousZoom(self.ZMIN)
-
-    def move_up(self):
-        log("[ptz] move up...")
-        self.onvif.continuousMove(0, self.YMAX)
-
-    def move_down(self):
-        log("[ptz] move down...")
-        self.onvif.continuousMove(0, self.YMIN)
-
-    def move_right(self):
-        log("[ptz] move right...")
-        self.onvif.continuousMove(self.XMAX, 0)
-
-    def move_left(self):
-        log("[ptz] move left...")
-        self.onvif.continuousMove(self.XMIN, 0)
-
-    def stop(self):
-        log("[ptz] stop camera...")
-        self.onvif.stopMove("true", "true")
-
     def move(self, direction):
-        return getattr(self, direction)
+
+        if direction == "stop":
+            return self.onvif.stopMove("true", "true")
+
+        return self.onvif.continuousZoom(*self.directions[direction])
 
     def get_profile_token(self):
         response = self.onvif.getProfiles()
