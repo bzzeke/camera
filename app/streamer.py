@@ -71,7 +71,7 @@ class CameraStream(Thread):
     def get_capture(self, url):
         if os.environ["CAPTURER_TYPE"] == "gstreamer":
             decoder = "avdec_{}".format(self.camera["codec"]) if os.environ["CAPTURER_HARDWARE"] == "cpu" else "vaapidecodebin"
-            return cv2.VideoCapture('rtspsrc location="{}" latency=0 protocols=GST_RTSP_LOWER_TRANS_TCP ! rtph{}depay ! h{}parse ! {} ! videoconvert ! appsink'.format(url, self.camera["codec"], self.camera["codec"], decoder), cv2.CAP_GSTREAMER)
+            return cv2.VideoCapture('rtspsrc location="{}" latency=0 protocols=GST_RTSP_LOWER_TRANS_TCP ! rtp{}depay ! {}parse ! {} ! videoconvert ! appsink'.format(url, self.camera["codec"], self.camera["codec"], decoder), cv2.CAP_GSTREAMER)
         else:
             return cv2.VideoCapture(url)
 
