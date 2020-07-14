@@ -38,6 +38,7 @@ class State():
                 "name": cam,
                 "url": os.environ["CAM_URL_{}".format(it)],
                 "detection": "CAM_DETECTION_{}".format(it) in os.environ,
+                "codec": os.environ["CAM_CODEC_{}".format(it)],
                 "meta": {
                     "dtype": None,
                     "shape": None

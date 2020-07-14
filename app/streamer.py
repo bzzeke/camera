@@ -70,8 +70,8 @@ class CameraStream(Thread):
 
     def get_capture(self, url):
         if os.environ["CAPTURER_TYPE"] == "gstreamer":
-            decoder = "avdec_h264" if os.environ["CAPTURER_HARDWARE"] == "cpu" else "vaapidecodebin"
-            return cv2.VideoCapture('rtspsrc location="{}" latency=0 protocols=GST_RTSP_LOWER_TRANS_TCP ! rtph264depay ! h264parse ! {} ! videoconvert ! appsink'.format(url, decoder), cv2.CAP_GSTREAMER)
+            decoder = "avdec_{}".format(self.camera["codec"]) if os.environ["CAPTURER_HARDWARE"] == "cpu" else "vaapidecodebin"
+            return cv2.VideoCapture('rtspsrc location="{}" latency=0 protocols=GST_RTSP_LOWER_TRANS_TCP ! rtph{}depay ! h{}parse ! {} ! videoconvert ! appsink'.format(url, self.camera["codec"], self.camera["codec"], decoder), cv2.CAP_GSTREAMER)
         else:
             return cv2.VideoCapture(url)
 
@@ -103,6 +103,9 @@ class Streamer(Thread):
     def watch_stream(self, threads):
         TIMEOUT = 20
         for thread in threads:
+            if thread.ts_pregrab == 0:
+                continue
+
             if time.time() - thread.ts_pregrab > TIMEOUT:
                 log("[streamer] Looks like thread is hang up: {} - {}, {}, {}, {}".format(thread.camera["name"], thread.ts_pregrab, thread.ts_postgrab, thread.ts_prezmq, thread.ts_postzmq))
                 thread.video.release()

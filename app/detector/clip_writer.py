@@ -16,7 +16,7 @@ class ClipWriter(Thread):
     COLOR = (153, 255, 51)
     stop = False
     camera = None
-    notifier = Notifier()
+    notifier = None
     circular_queue = None
     start_timestamp = 0
     api = Api()
@@ -26,6 +26,7 @@ class ClipWriter(Thread):
         super(ClipWriter, self).__init__(group=group, target=target, name=name)
         self.camera = camera
         self.circular_queue = circular_queue
+        self.notifier = Notifier()
         self.notifier.start()
 
     def run(self):
