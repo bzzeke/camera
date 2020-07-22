@@ -51,7 +51,6 @@ class MotionDetector(Thread):
         s.setsockopt(zmq.SUBSCRIBE, b"")
         s.setsockopt(zmq.RCVTIMEO, 2000)
         frame_idx = 0
-        it = 0
 
         while not self.stop:
             try:
@@ -63,8 +62,7 @@ class MotionDetector(Thread):
             frame = A.reshape(self.camera["meta"]["shape"])
             del A
             frame_idx += 1
-            it += 1
-            self.writer_queue.put((it, frame))
+            self.writer_queue.put(frame)
 
             if frame_idx % self.RATE == 0:
                 self.object_detector_queue.put((self.response_queue, frame, int(time.time())))
