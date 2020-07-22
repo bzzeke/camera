@@ -6,12 +6,34 @@ from util import log
 class PTZ():
 
     directions = {
-        "zoom_in": [1],
-        "zoom_out": [-1],
-        "move_up": [0, 1],
-        "move_down": [0, -1],
-        "move_left": [-1, 0],
-        "move_right": [1, 0],
+        "zoom_in": {
+            "method": "continuousZoom",
+            "params": [1]
+        },
+        "zoom_out": {
+            "method": "continuousZoom",
+            "params": [-1]
+        },
+        "move_up": {
+            "method": "continuousMove",
+            "params": [0, 1]
+        },
+        "move_down": {
+            "method": "continuousMove",
+            "params": [0, -1]
+        },
+        "move_left": {
+            "method": "continuousMove",
+            "params": [-1, 0]
+        },
+        "move_right": {
+            "method": "continuousMove",
+            "params": [1, 0]
+        },
+        "stop": {
+            "method": "stopMove",
+            "params": ["true", "true"]
+        }
     }
     onvif = None
 
@@ -23,11 +45,8 @@ class PTZ():
         self.onvif.setProfileToken(self.get_profile_token())
 
     def move(self, direction):
-
-        if direction == "stop":
-            return self.onvif.stopMove("true", "true")
-
-        return self.onvif.continuousZoom(*self.directions[direction])
+        if direction in self.directions:
+            return getattr(self.onvif, self.directions[direction]["method"])(*self.directions[direction]["params"])
 
     def get_profile_token(self):
         response = self.onvif.getProfiles()
