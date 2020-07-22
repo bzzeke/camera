@@ -41,8 +41,8 @@ class ClipWriter(Thread):
 
         while not self.stop:
 
-            frame = self.writer_queue.get()
-            circular_queue.append(frame)
+            it, frame = self.writer_queue.get()
+            circular_queue.append((it, frame))
 
             if self.start_timestamp > 0 and out == None:
                 last_timestamp = self.start_timestamp
@@ -55,7 +55,9 @@ class ClipWriter(Thread):
 
                 while True:
                     try:
-                        out.write(circular_queue.popleft())
+                        i, fr = circular_queue.popleft()
+                        print("Write frame idx {} from circular queue".format(i))
+                        out.write(fr)
                     except Exception:
                         break
                 continue
@@ -67,6 +69,7 @@ class ClipWriter(Thread):
                 last_timestamp = 0
 
             if out:
+                print("Write frame idx {} from writer queue".format(it))
                 out.write(frame)
 
         self.notifier.stop = True
