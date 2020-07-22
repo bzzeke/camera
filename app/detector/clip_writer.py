@@ -4,6 +4,7 @@ import queue
 import os
 import pickledb
 import numpy as np
+import collections
 
 from threading import Thread
 
@@ -14,49 +15,56 @@ from util import log
 class ClipWriter(Thread):
 
     COLOR = (153, 255, 51)
+    CIRCULAR_BUFFER = 5 # seconds
+
     stop = False
     camera = None
     notifier = None
-    circular_queue = None
+    writer_queue = None
     start_timestamp = 0
     api = Api()
     categories = []
 
-    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera=None, circular_queue=None):
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera=None, writer_queue=None):
         super(ClipWriter, self).__init__(group=group, target=target, name=name)
         self.camera = camera
-        self.circular_queue = circular_queue
+        self.writer_queue = writer_queue
         self.notifier = Notifier()
         self.notifier.start()
 
     def run(self):
 
         out = None
+        frame = None
         last_timestamp = 0
+        circular_queue = collections.deque(maxlen=self.CIRCULAR_BUFFER * self.camera["meta"]["fps"])
+
         while not self.stop:
+
+            frame = self.writer_queue.get()
+            circular_queue.append(frame)
 
             if self.start_timestamp > 0 and out == None:
                 last_timestamp = self.start_timestamp
                 self.categories = []
-                self.circular_queue.drop = False
                 file_path = self.api.path(self.camera["name"], self.start_timestamp, "mp4")
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
                 fourcc = cv2.VideoWriter_fourcc("a", "v", "c", "1")
                 out = cv2.VideoWriter(file_path, fourcc, self.camera["meta"]["fps"], (self.camera["meta"]["width"], self.camera["meta"]["height"]))
 
+                while True:
+                    try:
+                        out.write(circular_queue.popleft())
+                    except Exception:
+                        break
+                continue
+
             if self.start_timestamp == 0 and out != None:
                 out.release()
                 out = None
                 self.finish_clip(last_timestamp)
                 last_timestamp = 0
-                self.circular_queue.drop = True
-
-            if self.start_timestamp > 0:
-                frame = self.circular_queue.get()
-            else:
-                time.sleep(0.01)
-                continue
 
             if out:
                 out.write(frame)
