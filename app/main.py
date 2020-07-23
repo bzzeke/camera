@@ -3,7 +3,7 @@ import sys
 import threading
 import queue
 import os
-import pickledb
+import jdb
 
 from threading import Thread, RLock
 from urllib.parse import urlparse
@@ -25,7 +25,7 @@ class State():
     db = None
 
     def __init__(self):
-        self.db = pickledb.load(self.CAMERA_CONFIG, True, sig=False)
+        self.db = jdb.load(self.CAMERA_CONFIG, True)
         self.cameras = self.init_cameras()
 
     def init_cameras(self):

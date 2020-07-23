@@ -9,7 +9,7 @@ import copy
 import urllib, urllib.request
 import shutil, ssl, base64
 import re
-import pickledb
+import jdb
 import datetime as dt
 
 from threading import Thread
@@ -23,7 +23,7 @@ class Api:
     def get_clips(self, camera, rule, date):
         filepath = self.db_path(date)
         if os.path.isfile(filepath):
-            db = pickledb.load(filepath, True, sig=False)
+            db = jdb.load(filepath, True)
             clips = db.lgetall("clips")
             if camera != "":
                 clips = list(filter(lambda item: item["camera"] == camera, clips))

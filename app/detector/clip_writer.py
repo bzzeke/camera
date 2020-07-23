@@ -2,7 +2,7 @@ import cv2
 import time
 import queue
 import os
-import pickledb
+import jdb
 import numpy as np
 import collections
 
@@ -116,7 +116,7 @@ class ClipWriter(Thread):
     def save_meta(self, categories, timestamp):
         file_path = self.api.db_path(timestamp)
 
-        db = pickledb.load(file_path, True, sig=False)
+        db = jdb.load(file_path, True)
 
         if not db.exists("clips"):
             db.lcreate("clips")
