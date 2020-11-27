@@ -40,14 +40,16 @@ class SceneState():
     start_timestamp = 0
     clip_writer = None
     zone = None
+    valid_categories = None
     has_snapshot = False
 
     def __init__(self, clip_writer=None):
         self.clip_writer = clip_writer
         self.zone = self.convert_zone(clip_writer.camera["zone"])
+        self.valid_categories = clip_writer.camera["valid_categories"]
 
     def check_state(self, objects, frame, timestamp):
-        objects = list(filter(lambda obj: self.object_in_zone(obj) == True, objects))
+        objects = list(filter(lambda obj: self.is_detectable(obj) == True, objects))
 
         if self.objects == None:
             self.objects = self.generate_state(objects)
@@ -146,7 +148,11 @@ class SceneState():
     def convert_object(self, obj):
         return Polygon([(obj["xmin"], obj["ymin"]), (obj["xmax"], obj["ymin"]), (obj["xmax"], obj["ymax"]), (obj["xmin"], obj["ymax"])])
 
-    def object_in_zone(self, obj):
+    def is_detectable(self, obj):
+
+        if self.valid_categories and obj["category"] not in self.valid_categories:
+            return False
+
         if self.zone.is_empty:
             return True
 

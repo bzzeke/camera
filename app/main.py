@@ -42,7 +42,8 @@ class State():
                 "meta": {
                     "dtype": None,
                     "shape": None
-                }
+                },
+                "valid_categories": []
             }
 
             if "CAM_ONVIF_{}".format(it) in os.environ:
@@ -56,6 +57,9 @@ class State():
 
             if "CAM_PTZ_FEATURES_{}".format(it) in os.environ:
                 cameras[cam]["ptz_features"] = os.environ["CAM_PTZ_FEATURES_{}".format(it)]
+
+            if "CAM_VALID_CATEGORIES_{}".format(it) in os.environ:
+                cameras[cam]["valid_categories"] = os.environ["CAM_VALID_CATEGORIES_{}".format(it)].split(",")
 
             zone = []
             if self.db.exists(cam) and self.db.dexists(cam, "zone"):
