@@ -20,7 +20,7 @@ class MotionDetector(Thread):
     RATE = 10 # each N frame
 
     stop = False
-    camera = {}
+    camera = None
 
     response_queue = None
     object_detector_queue = None
@@ -44,10 +44,10 @@ class MotionDetector(Thread):
         self.object_processor.start()
 
     def run(self):
-        log("[motion_detector] [{}] Starting detector".format(self.camera["name"]))
+        log("[motion_detector] [{}] Starting detector".format(self.camera.name))
         ctx = zmq.Context()
         s = ctx.socket(zmq.SUB)
-        s.connect("ipc:///tmp/streamer_{}".format(self.camera["name"]))
+        s.connect("ipc:///tmp/streamer_{}".format(self.camera.name))
         s.setsockopt(zmq.SUBSCRIBE, b"")
         s.setsockopt(zmq.RCVTIMEO, 2000)
         frame_idx = 0
@@ -58,8 +58,8 @@ class MotionDetector(Thread):
             except:
                 continue
 
-            A = np.frombuffer(msg, dtype=self.camera["meta"]["dtype"])
-            frame = A.reshape(self.camera["meta"]["shape"])
+            A = np.frombuffer(msg, dtype=self.camera.meta["dtype"])
+            frame = A.reshape(self.camera.meta["shape"])
             del A
             frame_idx += 1
             self.writer_queue.put(frame)
@@ -69,10 +69,11 @@ class MotionDetector(Thread):
                 frame_idx = 0
 
         s.close()
-        self.object_processor.stop = True
-        self.object_processor.join()
+        self.object_processor.stop()
+        self.clip_writer.stop()
 
-        self.clip_writer.stop = True
-        self.clip_writer.join()
+    def stop(self):
+        self.stop = True
+        self.join()
 
 

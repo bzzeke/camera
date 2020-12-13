@@ -16,7 +16,6 @@ from threading import Thread
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
 
-from ptz import PTZ
 from util import log
 
 class Api:
@@ -57,10 +56,10 @@ class Api:
         return "{}/{}/{}/{}/{}/{}.{}".format(os.environ["DETECTOR_STORAGE_PATH"], clip_date.year, clip_date.month, clip_date.day, camera, timestamp, ext)
 
 class ApiHTTPServer(ThreadingMixIn, HTTPServer):
-    state = None
-    def __init__(self, server_address, RequestHandlerClass, bind_and_activate=True, state=None):
+    cameras = None
+    def __init__(self, server_address, RequestHandlerClass, bind_and_activate=True, cameras=cameras):
         super(ApiHTTPServer, self).__init__(server_address, RequestHandlerClass, bind_and_activate=bind_and_activate)
-        self.state = state
+        self.cameras = cameras
 
 class HTTPHandler(BaseHTTPRequestHandler):
 
@@ -105,19 +104,10 @@ class ApiHandler(HTTPHandler):
         self.send_header("Content-type", "image/jpeg")
         self.end_headers()
         cam = args[0]
-        if cam in self.server.state.cameras:
+        if cam in self.server.cameras:
             try:
-                camera = self.server.state.cameras[cam]
-                ctx = zmq.Context()
-                s = ctx.socket(zmq.SUB)
-                s.connect("ipc:///tmp/streamer_%s" % cam)
-                s.setsockopt(zmq.SUBSCRIBE, b"")
-
-                msg = s.recv()
-                s.close()
-                A = numpy.frombuffer(msg, dtype=camera["meta"]["dtype"])
-                frame = A.reshape(camera["meta"]["shape"])
-                del A
+                camera = self.server.cameras[cam]
+                frame = camera.make_snapshot()
 
                 if len(args) == 2:
                     frame = self.resize_image(frame, int(args[1]))
@@ -139,11 +129,9 @@ class ApiHandler(HTTPHandler):
 
         status = "failed"
 
-        if cam in self.server.state.cameras:
-            camera = self.server.state.cameras[cam]
-            if "onvif" in camera:
-                ptz = PTZ(camera["onvif"])
-                ptz.move(direction)
+        if cam in self.server.cameras:
+            camera = self.server.cameras[cam]
+            if camera.move(direction):
                 status = "ok"
 
         return json.dumps({
@@ -166,12 +154,13 @@ class ApiHandler(HTTPHandler):
         status = "failed"
 
         data = json.loads(body)
-        if "zone" in data:
+        if "zone" in data and cam in self.server.cameras[cam]:
             status = "ok"
 
-            camera = self.server.state.cameras[cam]
-            camera["zone"] = data["zone"]
-            self.server.state.set_camera(camera)
+            camera = self.server.cameras[cam]
+            camera.set_zone(data["zone"])
+            if camera.detection["enabled"]:
+                camera.restart_detection()
 
         return json.dumps({
             "status": status
@@ -185,13 +174,11 @@ class ApiHandler(HTTPHandler):
 
         cameras = []
 
-        for cam in self.server.state.cameras:
-            camera = copy.deepcopy(self.server.state.cameras[cam])
-            del camera["meta"]["dtype"]
-            del camera["meta"]["shape"]
-            camera["name"] = cam
-            camera["snapshot_url"] = "http://%s:%s/snapshot/%s" % (os.environ["API_SERVER_HOST"], os.environ["API_SERVER_PORT"], cam)
-            cameras.append(camera)
+        for cam in self.server.cameras:
+            camera = self.server.cameras[cam]
+            features = camera.get_features()
+            features["snapshot_url"] = "http://%s:%s/snapshot/%s" % (os.environ["API_SERVER_HOST"], os.environ["API_SERVER_PORT"], cam)
+            cameras.append(features)
 
         return json.dumps({
             "status": "ok",
@@ -353,16 +340,16 @@ class ApiHandler(HTTPHandler):
 
 
 class ApiServer(Thread):
-    state = None
+    cameras = None
     httpd = None
 
-    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, state=None):
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, cameras=None):
         super(ApiServer,self).__init__(group=group, target=target, name=name)
-        self.state = state
+        self.cameras = cameras
 
     def run(self):
         log("[api] Starting service")
-        self.httpd = ApiHTTPServer(("", int(os.environ["API_SERVER_PORT"])), ApiHandler, state=self.state)
+        self.httpd = ApiHTTPServer(("", int(os.environ["API_SERVER_PORT"])), ApiHandler, cameras=self.cameras)
         try:
             self.httpd.serve_forever()
         except KeyboardInterrupt:
@@ -372,3 +359,4 @@ class ApiServer(Thread):
 
     def stop(self):
         self.httpd.shutdown()
+        self.join()

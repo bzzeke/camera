@@ -99,3 +99,7 @@ class ObjectDetector(Thread):
 
         return objects
 
+    def stop(self):
+        self.stop = True
+        self.join()
+

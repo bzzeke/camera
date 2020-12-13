@@ -60,3 +60,7 @@ class Notifier(Thread):
 
         except Exception as e:
             log("[notifier] Failed to send message {}: {}".format(message, str(e)))
+
+    def stop(self):
+        self.stop = True
+        self.join()

@@ -59,3 +59,7 @@ class Cleanup(Thread):
             for filename in files:
                 filepath = join(root, filename)
                 self.current_size += getsize(filepath)
+
+    def stop(self):
+        self.stop = True
+        self.join()

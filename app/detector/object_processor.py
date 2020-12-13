@@ -28,7 +28,9 @@ class ObjectProcessor(Thread):
 
             self.scene_state.check_state(objects, frame, timestamp)
 
-
+    def stop(self):
+        self.stop = True
+        self.join()
 
 class SceneState():
     FRAMES_WITH_NO_MOTION = 3
@@ -45,8 +47,8 @@ class SceneState():
 
     def __init__(self, clip_writer=None):
         self.clip_writer = clip_writer
-        self.zone = self.convert_zone(clip_writer.camera["zone"])
-        self.valid_categories = clip_writer.camera["valid_categories"]
+        self.zone = self.convert_zone(clip_writer.camera.detection["zone"])
+        self.valid_categories = clip_writer.camera.detection["valid_categories"]
 
     def check_state(self, objects, frame, timestamp):
         objects = list(filter(lambda obj: self.is_detectable(obj) == True, objects))

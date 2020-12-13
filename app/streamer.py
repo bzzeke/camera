@@ -10,34 +10,30 @@ from threading import Thread
 from util import log
 
 class CameraStream(Thread):
-    camera = {}
-    state = None
+    camera = None
     video = None
+    stop = False
 
     ts_pregrab = 0
     ts_postgrab = 0
     ts_prezmq = 0
     ts_postzmq = 0
 
-    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera=None, state=None):
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera=None):
         super(CameraStream, self).__init__(group=group, target=target, name=name)
         self.camera = camera
-        self.state = state
-        self.stop = False
-
-    def set_meta(self):
-
-        log("[streamer] [{}] Save meta information".format(self.camera["name"]))
-        self.state.set_camera(self.camera)
 
     def run(self):
-        self.video = self.get_capture(self.camera["url"])
+        self.video = self.get_capture(self.camera.stream_url)
 
-        log("[streamer] [{}] Starting stream".format(self.camera["name"]))
+        log("[streamer] [{}] Starting stream".format(self.camera.name))
 
         ctx = zmq.Context()
         s = ctx.socket(zmq.PUB)
-        s.bind("ipc:///tmp/streamer_%s" % self.camera["name"])
+        s.bind("ipc:///tmp/streamer_%s" % self.camera.name)
+
+        stream_watcher = StreamWatcher(camera_stream=self)
+        stream_watcher.start()
 
         while True:
             if self.stop:
@@ -48,65 +44,66 @@ class CameraStream(Thread):
             self.ts_postgrab = time.time()
 
             if not grabbed:
-                # log("[streamer] [{}] Reconnecting to camera".format(self.camera["name"]))
+                # log("[streamer] [{}] Reconnecting to camera".format(self.camera.name))
                 self.video.release()
-                self.video = self.get_capture(self.camera["url"])
+                self.video = self.get_capture(self.camera.stream_url)
                 time.sleep(5)
                 continue
 
-            if self.camera["meta"]["dtype"] == None:
-                self.camera["meta"]["dtype"] = str(frame.dtype)
-                self.camera["meta"]["shape"] = frame.shape
-                self.camera["meta"]["width"] = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
-                self.camera["meta"]["height"] = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                self.camera["meta"]["fps"] = int(self.video.get(cv2.CAP_PROP_FPS))
-                self.set_meta()
+            if self.camera.meta["dtype"] == None:
+                self.camera.set_meta({
+                    "dtype": str(frame.dtype),
+                    "shape": frame.shape,
+                    "width": int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                    "height": int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+                    "fps": int(self.video.get(cv2.CAP_PROP_FPS)),
+                })
+                log("[streamer] [{}] Save meta information".format(self.camera.name))
 
             self.ts_prezmq = time.time()
             s.send(frame)
             self.ts_postzmq = time.time()
             del frame
         s.close()
+        stream_watcher.stop()
 
     def get_capture(self, url):
         if os.environ["CAPTURER_TYPE"] == "gstreamer":
-            decoder = "avdec_{}".format(self.camera["codec"]) if os.environ["CAPTURER_HARDWARE"] == "cpu" else "vaapidecodebin"
-            return cv2.VideoCapture('rtspsrc location="{}" latency=0 protocols=GST_RTSP_LOWER_TRANS_TCP ! rtp{}depay ! {}parse ! {} ! videoconvert ! appsink'.format(url, self.camera["codec"], self.camera["codec"], decoder), cv2.CAP_GSTREAMER)
+            decoder = "avdec_{}".format(self.camera.codec) if os.environ["CAPTURER_HARDWARE"] == "cpu" else "vaapidecodebin"
+            return cv2.VideoCapture('rtspsrc location="{}" latency=0 protocols=GST_RTSP_LOWER_TRANS_TCP ! rtp{}depay ! {}parse ! {} ! videoconvert ! appsink'.format(url, self.camera.codec, self.camera.codec, decoder), cv2.CAP_GSTREAMER)
         else:
             return cv2.VideoCapture(url)
 
+    def stop(self):
+        self.stop = True
+        self.join()
 
-class Streamer(Thread):
+
+class StreamWatcher(Thread):
     stop = False
-    state = None
+    camera_stream = None
 
-    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, state=None):
-        super(Streamer, self).__init__(group=group, target=target, name=name)
-        self.state = state
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera_stream=None):
+        super(StreamWatcher, self).__init__(group=group, target=target, name=name)
+        self.camera_stream = camera_stream
 
     def run(self):
-        log("[streamer] Starting service")
-        threads = []
-        for cam, camera in self.state.cameras.items():
-            thread = CameraStream(camera=camera, state=self.state)
-            thread.start()
-            threads.append(thread)
+        log("[stream_watcher] Starting service for {}".format(self.camera_stream.camera.name))
 
         while not self.stop:
             time.sleep(1)
-            self.watch_stream(threads)
+            self.watch_stream()
 
-        for thread in threads:
-            thread.stop = True
-            thread.join()
-
-    def watch_stream(self, threads):
+    def watch_stream(self):
         TIMEOUT = 20
-        for thread in threads:
-            if thread.ts_pregrab == 0:
-                continue
+        if self.camera_stream.ts_pregrab == 0:
+            return
 
-            if time.time() - thread.ts_pregrab > TIMEOUT:
-                log("[streamer] Looks like thread is hang up: {} - {}, {}, {}, {}".format(thread.camera["name"], thread.ts_pregrab, thread.ts_postgrab, thread.ts_prezmq, thread.ts_postzmq))
-                thread.video.release()
+        if time.time() - self.camera_stream.ts_pregrab > TIMEOUT:
+            log("[stream_watcher] Looks like thread is hang up: {} - {}, {}, {}, {}".format(self.camera_stream.camera.name, threself.camera_streamad.ts_pregrab, self.camera_stream.ts_postgrab, self.camera_stream.ts_prezmq, self.camera_stream.ts_postzmq))
+            self.camera_stream.video.release()
+
+    def stop(self):
+        self.stop = True
+        self.join()
 

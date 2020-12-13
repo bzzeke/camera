@@ -3,117 +3,40 @@ import sys
 import threading
 import queue
 import os
-import jdb
 
-from threading import Thread, RLock
-from urllib.parse import urlparse
+from threading import Thread
+from pyhap.accessory_driver import AccessoryDriver
 
 from util import import_env, log
-from streamer import Streamer
 from api import ApiServer
-from motion_detector import MotionDetector
-from detector.object_detector import ObjectDetector
+# from detector.object_detector import ObjectDetector
 from cleanup import Cleanup
-
-class State():
-    CAMERA_CONFIG = "cameras.json"
-
-    cameras = {}
-    lock = RLock()
-    threads = []
-    q = queue.Queue()
-    db = None
-
-    def __init__(self):
-        self.db = jdb.load(self.CAMERA_CONFIG, True)
-        self.cameras = self.init_cameras()
-
-    def init_cameras(self):
-        it = 0
-        cameras = {}
-
-        while "CAM_NAME_{}".format(it) in os.environ:
-            cam = os.environ["CAM_NAME_{}".format(it)]
-            cameras[cam] = {
-                "name": cam,
-                "url": os.environ["CAM_URL_{}".format(it)],
-                "detection": "CAM_DETECTION_{}".format(it) in os.environ,
-                "codec": os.environ["CAM_CODEC_{}".format(it)],
-                "meta": {
-                    "dtype": None,
-                    "shape": None
-                },
-                "valid_categories": []
-            }
-
-            if "CAM_ONVIF_{}".format(it) in os.environ:
-                parts = urlparse(os.environ["CAM_ONVIF_{}".format(it)])
-                cameras[cam]["onvif"] = {
-                    "host": parts.hostname,
-                    "port": parts.port,
-                    "username": parts.username,
-                    "password": parts.password
-                }
-
-            if "CAM_PTZ_FEATURES_{}".format(it) in os.environ:
-                cameras[cam]["ptz_features"] = os.environ["CAM_PTZ_FEATURES_{}".format(it)]
-
-            if "CAM_VALID_CATEGORIES_{}".format(it) in os.environ:
-                cameras[cam]["valid_categories"] = os.environ["CAM_VALID_CATEGORIES_{}".format(it)].split(",")
-
-            zone = []
-            if self.db.exists(cam) and self.db.dexists(cam, "zone"):
-                zone = self.db.dget(cam, "zone")
-            cameras[cam]["zone"] = zone
-
-            it += 1
-
-        return cameras
-
-    def set_camera(self, camera):
-        self.lock.acquire()
-        try:
-
-            self.cameras[camera["name"]] = camera
-
-            if not self.db.exists(camera["name"]):
-                self.db.dcreate(camera["name"])
-
-            self.db.dadd(camera["name"], ("zone", camera["zone"]))
-
-            if camera["detection"]:
-                self.restart_detection(camera)
-
-        finally:
-            self.lock.release()
-
-    def restart_detection(self, camera):
-        log("[state] Restart detection for camera {}".format(camera["name"]))
-        for thread in self.threads:
-            if thread.camera["name"] == camera["name"]:
-                thread.stop = True
-                thread.join()
-                self.threads.remove(thread)
-
-        motion_detector = MotionDetector(camera=camera, object_detector_queue=self.q)
-        motion_detector.start()
-        self.threads.append(motion_detector)
+from camera import Camera
+from homekit import HAPDriver
 
 if __name__ == "__main__":
     import_env()
 
-    state = State()
+    cameras = {}
+    object_detector_queue = queue.Queue()
+    homekit_accessory_driver = AccessoryDriver(address=os.environ["API_SERVER_HOST"], port=51826, persist_file=FILE_PERSISTENT)
 
-    object_detector = ObjectDetector(object_detector_queue=state.q)
-    object_detector.start()
+    it = 0
+    while "CAM_NAME_{}".format(it) in os.environ:
+        camera = Camera.setup(it, object_detector_queue, homekit_accessory_driver)
+        cameras[camera.name] = camera
+        it += 1
+
+    # object_detector = ObjectDetector(object_detector_queue=object_detector_queue)
+    # object_detector.start()
+
+    homekit_driver = HAPDriver(driver=homekit_accessory_driver)
+    homekit_driver.start()
 
     cleanup = Cleanup()
     cleanup.start()
 
-    streamer = Streamer(state=state)
-    streamer.start()
-
-    api_server = ApiServer(state=state)
+    api_server = ApiServer(cameras=cameras)
     api_server.start()
 
     total_threads = threading.active_count()
@@ -127,16 +50,11 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
 
         log("[main] Stopping all")
-        cleanup.stop = True
-        streamer.stop = True
-        object_detector.stop = True
+        cleanup.stop()
+        # object_detector.stop()
         api_server.stop()
 
-        for thread in state.threads:
-            thread.stop = True
-            thread.join()
+        for camera in cameras.values():
+            camera.stop()
 
-        cleanup.join()
-        streamer.join()
-        object_detector.join()
-        api_server.join()
+        homekit_driver.stop()
