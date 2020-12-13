@@ -159,8 +159,7 @@ class ApiHandler(HTTPHandler):
 
             camera = self.server.cameras[cam]
             camera.set_zone(data["zone"])
-            if camera.detection["enabled"]:
-                camera.restart_detection()
+            camera.restart_motion_detector()
 
         return json.dumps({
             "status": status

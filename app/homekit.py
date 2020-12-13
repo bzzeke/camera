@@ -1,6 +1,7 @@
 import os
 
 from pyhap import camera
+from threading import Thread
 
 class HAPCamera(camera.Camera):
     cameraObj = None

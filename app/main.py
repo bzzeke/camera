@@ -13,19 +13,34 @@ from api import ApiServer
 from cleanup import Cleanup
 from camera import Camera
 from homekit import HAPDriver
+from notifier import Notifier
+
+FILE_PERSISTENT = "accessory.state"
 
 if __name__ == "__main__":
     import_env()
 
     cameras = {}
     object_detector_queue = queue.Queue()
+
+    notifier = Notifier()
+    notifier.start()
+
     homekit_accessory_driver = AccessoryDriver(address=os.environ["API_SERVER_HOST"], port=51826, persist_file=FILE_PERSISTENT)
 
     it = 0
     while "CAM_NAME_{}".format(it) in os.environ:
-        camera = Camera.setup(it, object_detector_queue, homekit_accessory_driver)
-        cameras[camera.name] = camera
+        camera = Camera.setup(it, object_detector_queue, homekit_accessory_driver, notifier)
         it += 1
+        if camera == None:
+            continue
+
+        cameras[camera.name] = camera
+
+    if len(cameras) == 0:
+        log("[main] No cameras available, exiting")
+        notifier.stop()
+        sys.exit(1)
 
     # object_detector = ObjectDetector(object_detector_queue=object_detector_queue)
     # object_detector.start()

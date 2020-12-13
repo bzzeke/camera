@@ -23,6 +23,7 @@ class Camera():
     motion_detector = None
     object_detector_queue = None
     streamer = None
+    notifier = None
 
     name = ""
     codec = ""
@@ -53,10 +54,15 @@ class Camera():
         self.setup_camera(parts.username, parts.password)
 
     @staticmethod
-    def setup(id, object_detector_queue, homekit_driver):
+    def setup(id, object_detector_queue, homekit_driver, notifier):
 
-        camera = Camera(os.environ["CAM_ONVIF_{}".format(id)])
+        try:
+            camera = Camera(os.environ["CAM_ONVIF_{}".format(id)])
+        except Exception as e:
+            log("[camera] Failed to initialize camera: {}".format(str(e)))
+            return None
 
+        camera.notifier = notifier
         camera.object_detector_queue = object_detector_queue # FIXME?
         camera.name = os.environ["CAM_NAME_{}".format(id)]
         camera.codec = os.environ["CAM_CODEC_{}".format(id)]
@@ -66,11 +72,15 @@ class Camera():
             camera.detection["valid_categories"] = os.environ["CAM_VALID_CATEGORIES_{}".format(id)].split(",")
 
         camera.start_streamer()
+        camera.restart_motion_detector()
         camera.start_homekit(homekit_driver)
 
         return camera
 
     def restart_motion_detector(self):
+        if not self.detection["enabled"]:
+            return
+
         log("[camera] Restart detection for camera {}".format(self.name))
         if self.motion_detector != None:
             self.motion_detector.stop()
@@ -205,8 +215,6 @@ class Camera():
 
     def set_meta(self, meta):
         self.meta = meta
-        if self.detection["enabled"]:
-            self.restart_motion_detector()
 
     def make_snapshot(self):
         response = requests.get(self.snapshot_url)

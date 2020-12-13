@@ -9,7 +9,6 @@ import collections
 from threading import Thread
 
 from api import Api
-from notifier import Notifier
 from util import log
 
 class ClipWriter(Thread):
@@ -19,7 +18,6 @@ class ClipWriter(Thread):
 
     stop = False
     camera = None
-    notifier = None
     writer_queue = None
     start_timestamp = 0
     api = Api()
@@ -29,8 +27,6 @@ class ClipWriter(Thread):
         super(ClipWriter, self).__init__(group=group, target=target, name=name)
         self.camera = camera
         self.writer_queue = writer_queue
-        self.notifier = Notifier()
-        self.notifier.start()
 
     def run(self):
 
@@ -68,8 +64,6 @@ class ClipWriter(Thread):
 
             if out:
                 out.write(frame)
-
-        self.notifier.stop()
 
     def finish_clip(self, timestamp):
         file_path = self.api.path(self.camera.name, timestamp, "jpeg")
@@ -110,7 +104,7 @@ class ClipWriter(Thread):
         cv2.imwrite(file_path, snapshot_frame)
         del snapshot_frame
 
-        self.notifier.notify("Motion detected on camera {}: {}".format(self.camera.name, ", ".join(labels)), [(file_path, [self.camera.name, timestamp])])
+        self.camera.notifier.notify("Motion detected on camera {}: {}".format(self.camera.name, ", ".join(labels)), [(file_path, [self.camera.name, timestamp])])
 
     def save_meta(self, categories, timestamp):
         file_path = self.api.db_path(timestamp)
