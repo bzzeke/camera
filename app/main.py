@@ -10,7 +10,7 @@ from pyhap.accessory import Bridge
 
 from util import import_env, log
 from api import ApiServer
-# from detector.object_detector import ObjectDetector
+from detector.object_detector import ObjectDetector
 from cleanup import Cleanup
 from camera import Camera
 from homekit import HomekitDriver, HomekitCamera, HomekitWorker
@@ -42,8 +42,8 @@ if __name__ == "__main__":
 
         homekit_driver.add_accessory(accessory=homekit_bridge)
 
-        # object_detector = ObjectDetector(object_detector_queue=object_detector_queue)
-        # object_detector.start()
+        object_detector = ObjectDetector(object_detector_queue=object_detector_queue)
+        object_detector.start()
 
         homekit_worker = HomekitWorker(driver=homekit_driver)
         homekit_worker.start()
@@ -67,7 +67,7 @@ if __name__ == "__main__":
         log("[main] Stopping all")
         notifier.stop()
         cleanup.stop()
-        # object_detector.stop()
+        object_detector.stop()
         api_server.stop()
 
         for camera in cameras.values():
