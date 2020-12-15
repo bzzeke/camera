@@ -57,7 +57,7 @@ class ObjectDetector(Thread):
         input_blob = next(iter(self.net.inputs))
         n, c, h, w = self.net.inputs[input_blob].shape
 
-        while not self.stop:
+        while not self.stop_flag:
             try:
                 (out_queue, frame, timestamp) = self.object_detector_queue.get(block=False)
                 if self.object_detector_queue.qsize() >= self.MAX_QUEUE_LENGTH:
@@ -100,6 +100,6 @@ class ObjectDetector(Thread):
         return objects
 
     def stop(self):
-        self.stop = True
+        self.stop_flag = True
         self.join()
 

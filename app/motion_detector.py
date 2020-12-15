@@ -19,7 +19,7 @@ from detector.object_processor import ObjectProcessor
 class MotionDetector(Thread):
     RATE = 10 # each N frame
 
-    stop = False
+    stop_flag = False
     camera = None
 
     response_queue = None
@@ -52,7 +52,7 @@ class MotionDetector(Thread):
         s.setsockopt(zmq.RCVTIMEO, 2000)
         frame_idx = 0
 
-        while not self.stop:
+        while not self.stop_flag:
             try:
                 msg = s.recv()
             except:
@@ -73,7 +73,7 @@ class MotionDetector(Thread):
         self.clip_writer.stop()
 
     def stop(self):
-        self.stop = True
+        self.stop_flag = True
         self.join()
 
 

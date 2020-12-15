@@ -16,7 +16,7 @@ class ClipWriter(Thread):
     COLOR = (153, 255, 51)
     CIRCULAR_BUFFER = 5 # seconds
 
-    stop = False
+    stop_flag = False
     camera = None
     writer_queue = None
     start_timestamp = 0
@@ -35,7 +35,7 @@ class ClipWriter(Thread):
         last_timestamp = 0
         circular_queue = collections.deque(maxlen=self.CIRCULAR_BUFFER * self.camera.meta["fps"])
 
-        while not self.stop:
+        while not self.stop_flag:
 
             frame = self.writer_queue.get()
             circular_queue.append(frame)
@@ -125,7 +125,7 @@ class ClipWriter(Thread):
         os.remove(file_path)
 
     def stop(self):
-        self.stop = True
+        self.stop_flag = True
         self.join()
 
 

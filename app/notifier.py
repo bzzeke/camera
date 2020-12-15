@@ -12,7 +12,7 @@ from util import log
 
 class Notifier(Thread):
     queue = queue.Queue()
-    stop = False
+    stop_flag = False
 
     def notify(self, message, attachments = []):
 
@@ -22,7 +22,7 @@ class Notifier(Thread):
         self.queue.put((message, attachments))
 
     def run(self):
-        while not self.stop:
+        while not self.stop_flag:
             try:
                 (message, attachments) = self.queue.get(block=False)
                 self.send(message, attachments)
@@ -62,5 +62,5 @@ class Notifier(Thread):
             log("[notifier] Failed to send message {}: {}".format(message, str(e)))
 
     def stop(self):
-        self.stop = True
+        self.stop_flag = True
         self.join()

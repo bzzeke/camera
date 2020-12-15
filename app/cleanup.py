@@ -13,7 +13,7 @@ class Cleanup(Thread):
     max_size = 0
     clips_directory = ""
     period = 5 * 60 * 60 # seconds
-    stop = False
+    stop_flag = False
     regex = re.compile("[0-9]+\\.(jpeg|mp4)")
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None):
@@ -25,7 +25,7 @@ class Cleanup(Thread):
     def run(self):
         log("[cleanup] Starting service")
         last_check = 0
-        while not self.stop:
+        while not self.stop_flag:
             if time.time() - last_check >= self.period:
                 log("[cleanup] Checking space")
                 self.calculate_total_space()
@@ -35,7 +35,6 @@ class Cleanup(Thread):
                 last_check = time.time()
 
             time.sleep(1)
-
 
     def remove_oldest(self):
         total_size = 0
@@ -61,5 +60,5 @@ class Cleanup(Thread):
                 self.current_size += getsize(filepath)
 
     def stop(self):
-        self.stop = True
+        self.stop_flag = True
         self.join()

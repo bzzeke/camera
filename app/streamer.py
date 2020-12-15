@@ -12,7 +12,7 @@ from util import log
 class CameraStream(Thread):
     camera = None
     video = None
-    stop = False
+    stop_flag = False
 
     ts_pregrab = 0
     ts_postgrab = 0
@@ -35,9 +35,7 @@ class CameraStream(Thread):
         stream_watcher = StreamWatcher(camera_stream=self)
         stream_watcher.start()
 
-        while True:
-            if self.stop:
-                break
+        while not self.stop_flag:
 
             self.ts_pregrab = time.time()
             (grabbed, frame) = self.video.read()
@@ -75,12 +73,12 @@ class CameraStream(Thread):
             return cv2.VideoCapture(url)
 
     def stop(self):
-        self.stop = True
+        self.stop_flag = True
         self.join()
 
 
 class StreamWatcher(Thread):
-    stop = False
+    stop_flag = False
     camera_stream = None
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera_stream=None):
@@ -90,7 +88,7 @@ class StreamWatcher(Thread):
     def run(self):
         log("[stream_watcher] Starting service for {}".format(self.camera_stream.camera.name))
 
-        while not self.stop:
+        while not self.stop_flag:
             time.sleep(1)
             self.watch_stream()
 
@@ -100,10 +98,10 @@ class StreamWatcher(Thread):
             return
 
         if time.time() - self.camera_stream.ts_pregrab > TIMEOUT:
-            log("[stream_watcher] Looks like thread is hang up: {} - {}, {}, {}, {}".format(self.camera_stream.camera.name, threself.camera_streamad.ts_pregrab, self.camera_stream.ts_postgrab, self.camera_stream.ts_prezmq, self.camera_stream.ts_postzmq))
+            log("[stream_watcher] Looks like thread is hang up: {} - {}, {}, {}, {}".format(self.camera_stream.camera.name, self.camera_streamad.ts_pregrab, self.camera_stream.ts_postgrab, self.camera_stream.ts_prezmq, self.camera_stream.ts_postzmq))
             self.camera_stream.video.release()
 
     def stop(self):
-        self.stop = True
+        self.stop_flag = True
         self.join()
 

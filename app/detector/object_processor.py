@@ -8,18 +8,17 @@ from shapely.geometry import Polygon
 from util import log
 
 class ObjectProcessor(Thread):
-    stop = False
+    stop_flag = False
     response_queue = None
     scene_state = None
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, response_queue=None, clip_writer=None):
         super(ObjectProcessor, self).__init__(group=group, target=target, name=name)
         self.response_queue = response_queue
-        self.stop = False
         self.scene_state = SceneState(clip_writer=clip_writer)
 
     def run(self):
-        while not self.stop:
+        while not self.stop_flag:
             try:
                 (frame, timestamp, objects) = self.response_queue.get(block=False)
             except queue.Empty:
@@ -29,7 +28,7 @@ class ObjectProcessor(Thread):
             self.scene_state.check_state(objects, frame, timestamp)
 
     def stop(self):
-        self.stop = True
+        self.stop_flag = True
         self.join()
 
 class SceneState():

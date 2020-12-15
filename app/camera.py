@@ -4,10 +4,11 @@ import jdb
 
 from urllib.parse import urlparse, urlunparse
 from xml.etree import ElementTree
+from requests.auth import HTTPDigestAuth
 
 from onvif import Onvif
 from motion_detector import MotionDetector
-from homekit import HAPCamera
+from homekit import HomekitCamera
 from streamer import CameraStream
 from threading import Thread
 from util import log
@@ -54,7 +55,7 @@ class Camera():
         self.setup_camera(parts.username, parts.password)
 
     @staticmethod
-    def setup(id, object_detector_queue, homekit_driver, notifier):
+    def setup(id, object_detector_queue, homekit_bridge, notifier):
 
         try:
             camera = Camera(os.environ["CAM_ONVIF_{}".format(id)])
@@ -66,14 +67,14 @@ class Camera():
         camera.object_detector_queue = object_detector_queue # FIXME?
         camera.name = os.environ["CAM_NAME_{}".format(id)]
         camera.codec = os.environ["CAM_CODEC_{}".format(id)]
-        camera.detection["enabled"] = "CAM_DETECTION_{}".format(id) in os.environ
+        camera.detection["enabled"] = os.environ["CAM_DETECTION_{}".format(id)] if  "CAM_DETECTION_{}".format(id) in os.environ else False
 
         if "CAM_VALID_CATEGORIES_{}".format(id) in os.environ:
             camera.detection["valid_categories"] = os.environ["CAM_VALID_CATEGORIES_{}".format(id)].split(",")
 
         camera.start_streamer()
         camera.restart_motion_detector()
-        camera.start_homekit(homekit_driver)
+        camera.start_homekit(homekit_bridge)
 
         return camera
 
@@ -92,18 +93,15 @@ class Camera():
         self.streamer = CameraStream(camera=self)
         self.streamer.start()
 
-    def start_homekit(self, homekit_driver):
-        accessory = HAPCamera(self, homekit_driver, self.name)
-        homekit_driver.add_accessory(accessory=accessory)
+    def start_homekit(self, homekit_bridge):
+        accessory = HomekitCamera(self, homekit_bridge.driver, self.name)
+        homekit_bridge.add_accessory(accessory)
 
     def stop(self):
         self.streamer.stop()
 
         if self.motion_detector != None:
             self.motion_detector.stop()
-
-        if self.driver != None:
-            self.driver.stop()
 
     def setup_camera(self, username, password):
         streams = self.get_stream_urls()
@@ -118,7 +116,7 @@ class Camera():
         self.substream_url = urlunparse(parts)
 
         parts = urlparse(snapshots[0])
-        parts = parts._replace(netloc="{}:{}@{}:{}".format(username, password, parts.hostname, parts.port))
+        parts = parts._replace(netloc="{}:{}@{}:{}".format(username, password, parts.hostname, parts.port if parts.port != None else 80))
         self.snapshot_url = urlunparse(parts)
         self.ptz = self.get_ptz_features()
 
@@ -217,7 +215,9 @@ class Camera():
         self.meta = meta
 
     def make_snapshot(self):
-        response = requests.get(self.snapshot_url)
+        parts = urlparse(self.snapshot_url)
+        response = requests.get(self.snapshot_url, auth=HTTPDigestAuth(parts.username, parts.password))
+
         if response.status_code == 200:
             return response.content
 
