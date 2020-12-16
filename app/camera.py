@@ -201,7 +201,8 @@ class Camera():
             "detection": self.detection,
             "stream_url": self.stream_url,
             "substream_url": self.substream_url,
-            "ptz": self.ptz
+            "ptz": self.ptz,
+            "meta": self.meta
         }
 
     def set_zone(self, zone):
