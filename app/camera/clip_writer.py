@@ -8,7 +8,7 @@ import collections
 
 from threading import Thread
 
-from api import Api
+from api.clips import Clips
 from util import log
 
 class ClipWriter(Thread):
@@ -20,7 +20,7 @@ class ClipWriter(Thread):
     camera = None
     writer_queue = None
     start_timestamp = 0
-    api = Api()
+    api = Clips()
     categories = []
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera=None, writer_queue=None):

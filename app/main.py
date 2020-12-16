@@ -9,14 +9,13 @@ from pyhap.accessory_driver import AccessoryDriver
 from pyhap.accessory import Bridge
 
 from util import import_env, log
-from api import ApiServer
-from detector.object_detector import ObjectDetector
+from api.server import ApiServer
+from camera.object_detector import ObjectDetector
 from cleanup import Cleanup
-from camera import Camera
-from homekit import HomekitDriver, HomekitCamera, HomekitWorker
+from camera.camera import Camera
+from homekit import HomekitCamera, HomekitWorker
+from adapters.pyhap import HomekitDriver
 from notifier import Notifier
-
-FILE_PERSISTENT = "accessory.state"
 
 if __name__ == "__main__":
     import_env()
@@ -28,7 +27,7 @@ if __name__ == "__main__":
         notifier = Notifier()
         notifier.start()
 
-        homekit_driver = HomekitDriver(address=os.environ["API_SERVER_HOST"], port=51826, persist_file=FILE_PERSISTENT)
+        homekit_driver = HomekitDriver(address=os.environ["API_SERVER_HOST"], port=51826, persist_file="{}/data/bridge.state".format(os.environ["STORAGE_PATH"]))
         homekit_bridge = Bridge(homekit_driver, 'Camera bridge')
         it = 0
         while "CAM_NAME_{}".format(it) in os.environ:

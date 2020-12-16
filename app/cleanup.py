@@ -19,7 +19,7 @@ class Cleanup(Thread):
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None):
         super(Cleanup, self).__init__(group=group, target=target, name=name)
         self.max_size = int(os.environ["CLIPS_MAX_SIZE"])
-        self.clips_directory = os.environ["DETECTOR_STORAGE_PATH"]
+        self.clips_directory = "{}/clips".format(os.environ["STORAGE_PATH"])
 
 
     def run(self):

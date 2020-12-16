@@ -7,8 +7,8 @@ import queue
 from threading import Thread
 
 from util import log
-from detector.clip_writer import ClipWriter
-from detector.object_processor import ObjectProcessor
+from camera.clip_writer import ClipWriter
+from camera.object_processor import ObjectProcessor
 
 #
 #

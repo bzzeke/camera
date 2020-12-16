@@ -5,17 +5,15 @@ import jdb
 from urllib.parse import urlparse, urlunparse
 from xml.etree import ElementTree
 from requests.auth import HTTPDigestAuth
-
-from onvif import Onvif
-from motion_detector import MotionDetector
-from homekit import HomekitCamera
-from streamer import CameraStream
 from threading import Thread
+
+from camera.onvif import Onvif
+from camera.motion_detector import MotionDetector
+from camera.streamer import CameraStream
+from homekit import HomekitCamera
 from util import log
 
 class Camera():
-
-    CAMERA_CONFIG = "cameras.json"
 
     client = None
     main_stream_token = None
@@ -48,7 +46,7 @@ class Camera():
     def __init__(self, onvif_url, cpath="/onvif/device_service"):
         parts = urlparse(onvif_url)
 
-        self.db = jdb.load(self.CAMERA_CONFIG, True)
+        self.db = jdb.load("{}/data/cameras.json".format(os.environ["STORAGE_PATH"]), True)
         self.client = Onvif(parts.hostname, parts.port, cpath)
         self.client.set_auth(parts.username, parts.password)
         self.init_profile_tokens()
