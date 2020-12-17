@@ -6,9 +6,11 @@ from fastapi import FastAPI
 from uvicorn.server import Server, ServerState  # noqa: F401  # Used to be defined here.
 from uvicorn.supervisors import ChangeReload, Multiprocess
 from uvicorn.config import Config
+from starlette.responses import JSONResponse
 
-from api import routes
+from api import routes, auth
 from util import log
+from adapters.fastapi import APIException
 
 class ApiServer(Thread):
     cameras = None
@@ -22,9 +24,12 @@ class ApiServer(Thread):
         log("[api] Starting service")
 
         try:
-            app = FastAPI()
+            app = FastAPI(exception_handlers={APIException: http_exception_handler})
             app.cameras = self.cameras
-            app.include_router(routes.router)
+
+            protected = Depends(auth.HTTPHeaderAuthentication())
+            app.include_router(routes.router, dependencies=[protected])
+            app.include_router(auth.router)
 
             config = Config(app, host=os.environ["API_SERVER_HOST"], port=int(os.environ["API_SERVER_PORT"]))
             self.server = Server(config=config)
@@ -47,3 +52,13 @@ class ApiServer(Thread):
 
         self.server.handle_exit(None, None)
         self.join()
+
+
+async def http_exception_handler(request: Request, exc: APIException) -> JSONResponse:
+    headers = getattr(exc, "headers", None)
+    if headers:
+        return JSONResponse(
+            {"success": False, "message": exc.detail}, status_code=exc.status_code, headers=headers
+        )
+    else:
+        return JSONResponse({"success": False, "message": exc.detail}, status_code=exc.status_code)

@@ -2,9 +2,13 @@ from pydantic import BaseModel
 from typing import List, Optional, Any
 
 class ResponseModel(BaseModel):
-    status: str
+    success: bool
     results: Optional[Any]
 
 
 class ZoneModel(BaseModel):
     zone: List[int]
+
+class CredentialsModel(BaseModel):
+    username: str
+    password: str

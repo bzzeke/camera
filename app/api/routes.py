@@ -1,14 +1,14 @@
 import io, os, time
 import datetime as dt
 
-from fastapi import HTTPException, APIRouter
+from fastapi import APIRouter
 from starlette.requests import Request
 from starlette.responses import StreamingResponse, FileResponse
 
 from util import log, resize_image
 from api.models import ResponseModel, ZoneModel
 from api.clips import Clips
-from adapters.fastapi import MediaResponse
+from adapters.fastapi import MediaResponse, APIException
 
 
 router = APIRouter()
@@ -32,30 +32,30 @@ def snapshot(request: Request, cam: str, resize_to: int = 0):
 @router.post("/ptz/{cam}/{direction}", response_model=ResponseModel)
 def ptz(request: Request, cam: str, direction: str):
 
-    status = "failed"
+    success = False
 
     if cam in request.app.cameras:
         camera = request.app.cameras[cam]
         if camera.move(direction):
-            status = "ok"
+            success = True
 
     return {
-        "status": status
+        "success": success
     }
 
 @router.post("/detection-zone/{cam}", response_model=ResponseModel)
 def detection_zone(request: Request, cam: str, zone: ZoneModel):
 
-    status = "failed"
+    success = False
 
     if cam in request.app.cameras:
         camera = request.app.cameras[cam]
-        status = "ok"
+        success = True
 
         camera.set_zone(zone.dict())
 
     return {
-        "status": status
+        "success": success
     }
 
 @router.get("/cameras", response_model=ResponseModel)
@@ -70,7 +70,7 @@ def camera_list(request: Request):
         cameras.append(features)
 
     return {
-        "status": "ok",
+        "success": True,
         "results": cameras
     }
 
@@ -91,7 +91,7 @@ def clips_list(request: Request, camera: str = "", rule: str = "", date: str = "
     if rule == "All objects":
         rule = ""
 
-    status = "ok"
+    success = True
     results = []
 
     clips = api.get_clips(camera, rule, timestamp)
@@ -106,7 +106,7 @@ def clips_list(request: Request, camera: str = "", rule: str = "", date: str = "
             })
 
     return {
-        "status": status,
+        "success": True,
         "results": results
     }
 
@@ -117,7 +117,7 @@ def video(request: Request, cam: str, timestamp: int):
     filepath = api.get_video(cam, timestamp)
 
     if filepath == False:
-        raise HTTPException(status_code=404)
+        raise APIException(status_code=404)
 
     return MediaResponse(path=filepath, status_code=206, request_headers=request.headers)
 
@@ -127,7 +127,7 @@ def thumbnail(request: Request, cam: str, timestamp: int, resize_to: int = 0):
     api = Clips()
     filepath = api.get_thumbnail(cam, timestamp)
     if filepath == False:
-        raise HTTPException(status_code=404)
+        raise APIException(status_code=404)
 
     if resize_to > 0:
         with open(filepath, "rb") as handle:

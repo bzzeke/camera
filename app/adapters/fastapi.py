@@ -2,7 +2,9 @@ import re
 import aiofiles
 import stat
 import os
+import http
 
+from fastapi import HTTPException
 from email.utils import formatdate
 from starlette.responses import FileResponse
 from starlette.requests import Scope, Receive, Send
@@ -87,3 +89,7 @@ class MediaResponse(FileResponse):
                     )
         if self.background is not None:
             await self.background()
+
+
+class APIException(HTTPException):
+    pass
