@@ -37,16 +37,18 @@ def signup(request: Request, credentials: CredentialsModel):
     success = False
     if not has_user():
         set_user(credentials.username, credentials.password)
+        token = hash_credentials(credentials.username, sha1(credentials.password.encode('utf8')).hexdigest())
         success = True
 
     return {
-        "success": success
+        "success": success,
+        "results": [token] if success else None
     }
 
 class HTTPHeaderAuthentication:
 
-    async def __call__(self, request: Request, authentication: str = Header(None)):
-        user = self.locate_user(id=authentication)
+    async def __call__(self, request: Request, authorization: str = Header(None)):
+        user = self.locate_user(id=authorization)
         if not user:
             raise APIException(
                 status_code=HTTP_403_FORBIDDEN, detail="Not authenticated"
