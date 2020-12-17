@@ -157,8 +157,11 @@ export default class Zone {
             return;
         }
 
-        apiClient.post("detection_zone/" + this.camera.name, {
+        apiClient.saveZone(this.camera.name, {
             "zone": this.toAbsolutePoints(this.getPoints())
-        })
+        }).then(response => {
+            //show notification
+            console.log(response);
+        });
     }
 }

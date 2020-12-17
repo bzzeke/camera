@@ -1,19 +1,57 @@
 import axios from 'axios';
 
-const apiClient = axios.create({
-    baseURL: "http://172.25.33.41:9000",
+const client = axios.create({
+    baseURL: window.location.protocol + '//' + window.location.host,
+    // baseURL: "http://10.10.10.180:8000",
     headers: {
         "Content-Type": "application/json",
     }
 });
 
-/*const getAuthToken = () => localStorage.getItem('vue-authenticate.vueauth_token'); // FIXME
+const getAuthToken = () => localStorage.getItem('authToken'); // FIXME
 
 const authInterceptor = (config) => {
-    config.headers['BTOKEN'] = getAuthToken();
+    config.headers['Authorization'] = getAuthToken();
     return config;
 }
 
-apiClient.interceptors.request.use(authInterceptor);
-*/
+client.interceptors.request.use(authInterceptor);
+
+
+class APIClient {
+
+    getCameras() {
+        return client.get('/cameras')
+            .then(response => Promise.resolve(response.data))
+            .catch(error => Promise.reject(error));
+    }
+
+    signIn(username, password) {
+        return client.post('/signin', {
+            username: username,
+            password: password
+        })
+            .then(response => Promise.resolve(response.data))
+            .catch(error => Promise.reject(error));
+    }
+
+    signUp(username, password) {
+        return client.post('/signup', {
+            username: username,
+            password: password
+        })
+            .then(response => Promise.resolve(response.data))
+            .catch(error => Promise.reject(error));
+    }
+
+    saveZone(camera, data) {
+        return client.post('/detection-zone/' + camera, data)
+            .then(response => Promise.resolve(response.data))
+            .catch(error => Promise.reject(error));
+    }
+}
+
+const apiClient = new APIClient();
+
 export default apiClient;
+

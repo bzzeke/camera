@@ -20,11 +20,9 @@
         name: 'Layout',
         components: {Header, Sidebar },
         created() {
-            apiClient
-                .get('/camera_list')
-                .then(response => {
-                    this.setCameras(response.data.results);
-                });
+            apiClient.getCameras().then(response => {
+                this.setCameras(response.results);
+            });
         },
         methods: {
             ...mapMutations(['setCameras'])

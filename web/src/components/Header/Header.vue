@@ -36,7 +36,7 @@
             <v-list >
             <div class="text-h5 grey--text text--darken-3 px-4 pt-4">Admin</div>
             <div class="d-flex justify-center my-3">
-                <v-btn width="80%" large outlined color="primary" class="text-capitalize" @click="logOut">Sign Out</v-btn>
+                <v-btn width="80%" large outlined color="primary" class="text-capitalize" @click="signOut">Sign Out</v-btn>
             </div>
             </v-list>
         </v-menu>
@@ -63,8 +63,8 @@ import {mapActions, mapState} from 'vuex'
     },
     methods: {
       ...mapActions([ 'TOGGLE_DRAWER' ]),
-      logOut: function () {
-        window.localStorage.setItem('authenticated', false);
+      signOut: function () {
+        window.localStorage.removeItem('authToken');
         this.$router.push('/login');
       }
     }

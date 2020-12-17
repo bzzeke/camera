@@ -27,26 +27,19 @@
                             <v-col>
                                 <p class="login-slogan display-2 text-center font-weight-medium my-10">Good Morning, User</p>
                             </v-col>
-                            <v-col cols="12" class="d-flex align-center my-8">
-                                <v-divider></v-divider>
-                                <span class="px-5"> or </span>
-                                <v-divider></v-divider>
-                            </v-col>
                             <v-form>
                                 <v-col>
                                 <v-text-field
                                     v-model="email"
                                     :rules="emailRules"
-                                    value="admin@flatlogic.com"
+                                    value="admin@example.com"
                                     label="Email Address"
                                     required
                                 ></v-text-field>
                                 <v-text-field
                                     v-model="password"
-                                    :rules="passRules"
                                     type="password"
                                     label="Password"
-                                    hint="At least 6 characters"
                                     required
                                 ></v-text-field>
 
@@ -57,7 +50,7 @@
                                     large
                                     :disabled="password.length === 0 || email.length === 0"
                                     color="primary"
-                                    @click="login"
+                                    @click="signIn"
                                 >
                                     Login</v-btn>
                                 <v-btn large text class="text-capitalize primary--text">Forget Password</v-btn>
@@ -81,11 +74,6 @@
                             <v-form>
                                 <v-col>
                                 <v-text-field
-                                    v-model="createFullName"
-                                    label="Full Name"
-                                    required
-                                ></v-text-field>
-                                <v-text-field
                                     v-model="createEmail"
                                     :rules="emailRules"
                                     label="Email Address"
@@ -104,9 +92,9 @@
                                 <v-btn
                                     large
                                     block
-                                    :disabled="createFullName.length === 0 || createEmail.length === 0 || createPassword === 0"
+                                    :disabled="createEmail.length === 0 || createPassword === 0"
                                     color="primary"
-                                    @click="login"
+                                    @click="signUp"
                                 >
                                     Create your account</v-btn>
                                 </v-col>
@@ -125,11 +113,6 @@
                     </v-tabs>
                 </div>
                 </v-col>
-                <v-col cols="12" class="d-flex justify-center">
-                <v-footer>
-                    <div class="primary--text">© 2014-2020 <a href="https://flatlogic.com/" class="text-decoration-none">Flatlogic</a>, LLC. All rights reserved.</div>
-                </v-footer>
-                </v-col>
             </v-row>
             </v-col>
         </v-row>
@@ -139,33 +122,58 @@
 
 <script>
 
+import apiClient from '../../api_client';
+
 export default {
     name: 'Login',
     data() {
         return {
-            email: 'admin@flatlogic.com',
+            email: '',
+            password: '',
+            createEmail: '',
+            createPassword: '',
+
             emailRules: [
-            v => !!v || 'E-mail is required',
-            v => /.+@.+/.test(v) || 'E-mail must be valid',
+                v => !!v || 'E-mail is required',
+                v => /.+@.+/.test(v) || 'E-mail must be valid',
             ],
-            createFullName: 'John Smith',
-            createEmail: 'john@flatlogic.com',
-            createPassword: '123456',
-            password: '123456',
             passRules: [
-            v => !!v || 'Password is required',
-            v => v.length >= 6 || 'Min 6 characters'
+                v => !!v || 'Password is required',
+                v => v.length >= 6 || 'Min 6 characters'
             ]
         }
     },
     methods: {
-        login(){
-            window.localStorage.setItem('authenticated', true);
+        signIn(){
+            apiClient.signIn(this.email, this.password).then(response => {
+                    if (response.success) {
+                        this.signInAndRedirect(response.results[0]);
+                        return;
+                    }
+                    // show notification
+                    console.log(response);
+                });
+
+        },
+        signUp(){
+            apiClient.signUp(this.email, this.password).then(response => {
+                    if (response.success) {
+                        this.signInAndRedirect(response.results[0]);
+                        return;
+                    }
+                    // show notification
+                    console.log(response);
+                });
+
+        },
+        signInAndRedirect(token) {
+            window.localStorage.setItem('authToken', token);
             this.$router.push('/dashboard');
         }
+
     },
     created() {
-        if (window.localStorage.getItem('authenticated') === 'true') {
+        if (window.localStorage.getItem('authToken')) {
             this.$router.push('/dashboard');
         }
     }
