@@ -45,6 +45,12 @@ def signup(request: Request, credentials: CredentialsModel):
         "results": [token] if success else None
     }
 
+@router.get("/is-new", response_model=ResponseModel)
+def is_new(request: Request):
+    return {
+        "success": not has_user()
+    }
+
 class HTTPHeaderAuthentication:
 
     async def __call__(self, request: Request, authorization: str = Header(None)):

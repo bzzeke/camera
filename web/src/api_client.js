@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const client = axios.create({
     baseURL: window.location.protocol + '//' + window.location.host,
-    // baseURL: "http://10.10.10.180:8000",
+    // baseURL: "http://10.100.1.3:8000",
     headers: {
         "Content-Type": "application/json",
     }
@@ -46,6 +46,12 @@ class APIClient {
 
     saveZone(camera, data) {
         return client.post('/detection-zone/' + camera, data)
+            .then(response => Promise.resolve(response.data))
+            .catch(error => Promise.reject(error));
+    }
+
+    isNew() {
+        return client.get('/is-new')
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
     }

@@ -1,4 +1,4 @@
-import apiClient from '../api_client';
+
 import * as d3 from 'd3';
 
 export default class Zone {
@@ -152,16 +152,11 @@ export default class Zone {
         this.closePolygon();
     }
 
-    savePoligon() {
+    get() {
         if (this.drawing == true) {
-            return;
+            return false;
         }
 
-        apiClient.saveZone(this.camera.name, {
-            "zone": this.toAbsolutePoints(this.getPoints())
-        }).then(response => {
-            //show notification
-            console.log(response);
-        });
+        return this.toAbsolutePoints(this.getPoints());
     }
 }

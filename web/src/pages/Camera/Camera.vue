@@ -22,6 +22,7 @@
 <script>
 
 import Zone from '../../logic/zone';
+import apiClient from '../../api_client';
 import { mapGetters } from 'vuex';
 
 export default {
@@ -69,7 +70,17 @@ export default {
             this.zone.clearPoligon();
         },
         save() {
-            this.zone.savePoligon();
+            let zone = this.zone.get();
+            if (zone === false) {
+                this.$toast.error("Failed to save zone: please finish editing first");
+                return;
+            }
+
+            apiClient.saveZone(this.camera.name, {
+                "zone": zone
+            }).then(response => {
+                this.$toast.success("Zone saved successfully");
+            });
         },
 
     }
