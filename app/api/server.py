@@ -2,34 +2,38 @@ import os
 import uvicorn
 
 from threading import Thread
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from uvicorn.server import Server, ServerState  # noqa: F401  # Used to be defined here.
 from uvicorn.supervisors import ChangeReload, Multiprocess
 from uvicorn.config import Config
 from starlette.responses import JSONResponse
+from starlette.requests import Request
 
-from api import routes, auth
+from api.auth import HTTPHeaderAuthentication
+from api.routes import auth, camera, clips, discovery
 from util import log
 from adapters.fastapi import APIException
 
 class ApiServer(Thread):
-    cameras = None
+    camera_manager = None
     server = None
 
-    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, cameras=None):
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, camera_manager=None):
         super(ApiServer,self).__init__(group=group, target=target, name=name)
-        self.cameras = cameras
+        self.camera_manager = camera_manager
 
     def run(self):
         log("[api] Starting service")
 
         try:
             app = FastAPI(exception_handlers={APIException: http_exception_handler})
-            app.cameras = self.cameras
+            app.camera_manager = self.camera_manager
 
-            protected = Depends(auth.HTTPHeaderAuthentication())
-            app.include_router(routes.router, dependencies=[protected])
-            app.include_router(auth.router)
+            protected = Depends(HTTPHeaderAuthentication())
+            app.include_router(camera.router, prefix="/camera", dependencies=[protected])
+            app.include_router(clips.router, prefix="/clips", dependencies=[protected])
+            app.include_router(auth.router, prefix="/auth")
+            app.include_router(discovery.router)
 
             config = Config(app, host=os.environ["API_SERVER_HOST"], port=int(os.environ["API_SERVER_PORT"]))
             self.server = Server(config=config)

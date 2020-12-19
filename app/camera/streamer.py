@@ -98,7 +98,7 @@ class StreamWatcher(Thread):
             return
 
         if time.time() - self.camera_stream.ts_pregrab > TIMEOUT:
-            log("[stream_watcher] Looks like thread is hang up: {} - {}, {}, {}, {}".format(self.camera_stream.camera.name, self.camera_streamad.ts_pregrab, self.camera_stream.ts_postgrab, self.camera_stream.ts_prezmq, self.camera_stream.ts_postzmq))
+            log("[stream_watcher] Looks like thread is hang up: {} - {}, {}, {}, {}".format(self.camera_stream.camera.name, self.camera_stream.ts_pregrab, self.camera_stream.ts_postgrab, self.camera_stream.ts_prezmq, self.camera_stream.ts_postzmq))
             self.camera_stream.video.release()
 
     def stop(self):

@@ -4,7 +4,7 @@ import jdb
 
 from urllib.parse import urlparse, urlunparse
 from xml.etree import ElementTree
-from requests.auth import HTTPDigestAuth
+from requests.auth import HTTPDigestAuth, HTTPBasicAuth
 from threading import Thread
 
 from camera.onvif import Onvif
@@ -23,9 +23,9 @@ class Camera():
     object_detector_queue = None
     streamer = None
     notifier = None
+    auth_type = ""
 
     name = ""
-    codec = ""
     meta = {
         "dtype": None,
         "shape": None,
@@ -43,38 +43,25 @@ class Camera():
     snapshot_url = ""
     ptz = {}
 
-    def __init__(self, onvif_url, cpath="/onvif/device_service"):
-        parts = urlparse(onvif_url)
+    def __init__(self, name, onvif_url, detection = None, cpath="/onvif/device_service", notifier = None, object_detector_queue = None):
 
+        self.name = name
+        if detection != None:
+            self.detection = detection
+
+        self.notifier = notifier
+        self.object_detector_queue = object_detector_queue
         self.db = jdb.load("{}/data/cameras.json".format(os.environ["STORAGE_PATH"]), True)
-        self.client = Onvif(parts.hostname, parts.port, cpath)
+
+        parts = urlparse(onvif_url)
+        hostname = "{}:{}".format(parts.hostname, parts.port) if parts.port else parts.hostname
+        self.client = Onvif(hostname, cpath)
         self.client.set_auth(parts.username, parts.password)
         self.init_profile_tokens()
         self.setup_camera(parts.username, parts.password)
 
-    @staticmethod
-    def setup(id, object_detector_queue, homekit_bridge, notifier):
-
-        try:
-            camera = Camera(os.environ["CAM_ONVIF_{}".format(id)])
-        except Exception as e:
-            log("[camera] Failed to initialize camera: {}".format(str(e)))
-            return None
-
-        camera.notifier = notifier
-        camera.object_detector_queue = object_detector_queue # FIXME?
-        camera.name = os.environ["CAM_NAME_{}".format(id)]
-        camera.codec = os.environ["CAM_CODEC_{}".format(id)]
-        camera.detection["enabled"] = os.environ["CAM_DETECTION_{}".format(id)] if  "CAM_DETECTION_{}".format(id) in os.environ else False
-
-        if "CAM_VALID_CATEGORIES_{}".format(id) in os.environ:
-            camera.detection["valid_categories"] = os.environ["CAM_VALID_CATEGORIES_{}".format(id)].split(",")
-
-        camera.start_streamer()
-        camera.restart_motion_detector()
-        camera.start_homekit(homekit_bridge)
-
-        return camera
+        self.start_streamer()
+        self.restart_motion_detector()
 
     def restart_motion_detector(self):
         if not self.detection["enabled"]:
@@ -195,7 +182,6 @@ class Camera():
     def get_features(self):
         return {
             "name": self.name,
-            "codec": self.codec,
             "detection": self.detection,
             "stream_url": self.stream_url,
             "substream_url": self.substream_url,
@@ -215,9 +201,16 @@ class Camera():
 
     def make_snapshot(self):
         parts = urlparse(self.snapshot_url)
-        response = requests.get(self.snapshot_url, auth=HTTPDigestAuth(parts.username, parts.password))
+
+        auth_type = HTTPBasicAuth(parts.username, parts.password) if self.auth_type == "basic" else HTTPDigestAuth(parts.username, parts.password)
+        response = requests.get(self.snapshot_url, auth=auth_type)
+
+        if response.status_code != 200:
+            auth_type = HTTPBasicAuth(parts.username, parts.password) if self.auth_type != "basic" else HTTPDigestAuth(parts.username, parts.password)
+            response = requests.get(self.snapshot_url, auth=auth_type)
 
         if response.status_code == 200:
+            self.auth_type = "basic" if isinstance(auth_type, HTTPBasicAuth) else "digest"
             return response.content
 
-        return None
+        return b""

@@ -23,8 +23,8 @@ class Onvif():
 
     onvif_url = ""
 
-    def __init__(self, host, port, cpath="/onvif/device_service"):
-        self.onvif_url = "http://{}:{}{}".format(host, port, cpath)
+    def __init__(self, host, cpath="/onvif/device_service"):
+        self.onvif_url = "http://{}{}".format(host, cpath)
 
     def set_auth(self, username, password):
         self.username = username

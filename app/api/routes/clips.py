@@ -6,75 +6,13 @@ from starlette.requests import Request
 from starlette.responses import StreamingResponse, FileResponse
 
 from util import log, resize_image
-from api.models import ResponseModel, ZoneModel
+from api.models import ResponseModel
 from api.clips import Clips
 from adapters.fastapi import MediaResponse, APIException
 
-
 router = APIRouter()
 
-@router.get("/snapshot/{cam}")
-def snapshot(request: Request, cam: str, resize_to: int = 0):
-
-    if cam in request.app.cameras:
-        try:
-            camera = request.app.cameras[cam]
-            image = camera.make_snapshot()
-
-            if resize_to > 0:
-                image = resize_image(image, resize_to)
-
-            return StreamingResponse(io.BytesIO(image), media_type="image/jpeg")
-
-        except Exception as e:
-            log("[api] Failed to get image from stream: {}".format(str(e)))
-
-@router.post("/ptz/{cam}/{direction}", response_model=ResponseModel)
-def ptz(request: Request, cam: str, direction: str):
-
-    success = False
-
-    if cam in request.app.cameras:
-        camera = request.app.cameras[cam]
-        if camera.move(direction):
-            success = True
-
-    return {
-        "success": success
-    }
-
-@router.post("/detection-zone/{cam}", response_model=ResponseModel)
-def detection_zone(request: Request, cam: str, zone: ZoneModel):
-
-    success = False
-
-    if cam in request.app.cameras:
-        camera = request.app.cameras[cam]
-        success = True
-
-        camera.set_zone(zone.dict())
-
-    return {
-        "success": success
-    }
-
-@router.get("/cameras", response_model=ResponseModel)
-def camera_list(request: Request):
-    cameras = []
-
-    for cam in request.app.cameras:
-        camera = request.app.cameras[cam]
-
-        features = camera.get_features()
-        features["snapshot_url"] = "http://%s:%s/snapshot/%s" % (os.environ["API_SERVER_HOST"], os.environ["API_SERVER_PORT"], cam)
-        cameras.append(features)
-
-    return {
-        "success": True,
-        "results": cameras
-    }
-
-@router.get("/clips-list", response_model=ResponseModel)
+@router.get("/list", response_model=ResponseModel)
 def clips_list(request: Request, camera: str = "", rule: str = "", date: str = ""):
 
     api = Clips()
@@ -110,7 +48,7 @@ def clips_list(request: Request, camera: str = "", rule: str = "", date: str = "
         "results": results
     }
 
-@router.get("/video/{cam}/{timestamp}", response_model=ResponseModel)
+@router.get("/{cam}/video/{timestamp}", response_model=ResponseModel)
 def video(request: Request, cam: str, timestamp: int):
 
     api = Clips()
@@ -121,7 +59,7 @@ def video(request: Request, cam: str, timestamp: int):
 
     return MediaResponse(path=filepath, status_code=206, request_headers=request.headers)
 
-@router.get("/thumbnail/{cam}/{timestamp}", response_model=ResponseModel)
+@router.get("/{cam}/thumbnail/{timestamp}", response_model=ResponseModel)
 def thumbnail(request: Request, cam: str, timestamp: int, resize_to: int = 0):
 
     api = Clips()
