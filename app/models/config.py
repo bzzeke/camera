@@ -49,7 +49,7 @@ class Config(BaseModel):
     storage_path: str
 
     def save(self):
-        loco = "../storage/data/config.json"
+        loco = os.environ['CONFIG_PATH']
         tmp_file = "{}.tmp".format(loco)
         json.dump(self.dict(), open(tmp_file, 'wt'), indent=4)
 
@@ -60,4 +60,4 @@ class Config(BaseModel):
     def get_camera(self, name):
         return filter(lambda item: item.name == name, self.cameras)[0]
 
-config = Config.parse_file("../storage/data/config.json")
+config = Config.parse_file(os.environ['CONFIG_PATH'])

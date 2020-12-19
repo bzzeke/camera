@@ -4,14 +4,14 @@ import threading
 import os
 
 from util import import_env, log
+import_env()
+
 from api.server import ApiServer
 from cleanup import Cleanup
 from camera.manager import CameraManager
 from notifier import Notifier
 
 if __name__ == "__main__":
-    import_env()
-
     try:
         notifier = Notifier()
         notifier.start()
