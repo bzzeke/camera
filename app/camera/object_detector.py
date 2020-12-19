@@ -7,6 +7,7 @@ from threading import Thread
 from openvino.inference_engine import IENetwork, IECore
 
 from util import log
+from models.config import config
 from .yolo_params import YoloParams, intersection_over_union
 
 class ObjectDetector(Thread):
@@ -29,9 +30,9 @@ class ObjectDetector(Thread):
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None, object_detector_queue=None):
         super(ObjectDetector, self).__init__(group=group, target=target, name=name)
-        self.PATH_TO_MODEL = os.environ["MODEL_PATH"]
+        self.PATH_TO_MODEL = config.detector.model_path
         self.PATH_TO_LABELS = os.path.dirname(self.PATH_TO_MODEL) + "/classes.txt"
-        self.DEVICE = os.environ["INFERENCE_DEVICE"]
+        self.DEVICE = config.detector.inference_device
         self.object_detector_queue = object_detector_queue
 
         self.init_model()

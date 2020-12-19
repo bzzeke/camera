@@ -9,6 +9,7 @@ import time
 from threading import Thread
 
 from util import log
+from models.config import config
 
 class Notifier(Thread):
     queue = queue.Queue()
@@ -16,7 +17,7 @@ class Notifier(Thread):
 
     def notify(self, message, attachments = []):
 
-        if "CAMERA_DISABLE_NOTIFICATIONS" in os.environ:
+        if not config.notifications.enabled:
             return
 
         self.queue.put((message, attachments))
@@ -49,7 +50,7 @@ class Notifier(Thread):
                     payload["attachments"].append(base64.b64encode(img_data).decode())
                     payload["meta"]["surveillance"].append(meta)
 
-            r = requests.post(os.environ["NOTIFY_URL"], json=payload)
+            r = requests.post(config.notifications.url, json=payload)
 
             if r.status_code != 200:
                 try:

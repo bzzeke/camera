@@ -8,6 +8,7 @@ from starlette.responses import StreamingResponse
 from util import log, resize_image
 from api.models import ResponseModel, ZoneModel, CameraModel
 from adapters.fastapi import MediaResponse, APIException
+from models.config import config, CameraModel as ConfigCameraModel
 
 router = APIRouter()
 
@@ -71,13 +72,20 @@ def camera_list(request: Request):
 @router.post("/add", response_model=ResponseModel)
 def add_camera(request: Request, camera: CameraModel):
 
-    props = {
-        "name": camera.name,
-        "onvif_url": "onvif://{}:{}@{}".format(camera.username, camera.password, camera.hostname),
-        "detection": None
-    }
+    success = False
+    try:
+        model = ConfigCameraModel.parse_obj({
+            "name": camera.name,
+            "onvif_url": "onvif://{}:{}@{}".format(camera.username, camera.password, camera.hostname),
+        })
 
-    success = request.app.camera_manager.add(props)
+        success = request.app.camera_manager.add(model)
+        if success:
+            config.cameras.append(model)
+            config.save()
+
+    except Exception as e:
+        pass
 
     return {
         "success": success

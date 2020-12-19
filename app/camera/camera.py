@@ -1,6 +1,5 @@
 import requests
 import os
-import jdb
 
 from urllib.parse import urlparse, urlunparse
 from xml.etree import ElementTree
@@ -12,6 +11,7 @@ from camera.motion_detector import MotionDetector
 from camera.streamer import CameraStream
 from homekit import HomekitCamera
 from util import log
+from models.config import config, CameraModel
 
 class Camera():
 
@@ -33,29 +33,23 @@ class Camera():
         "height": 0,
         "fps": 0
     }
-    detection = {
-        "enabled": False,
-        "valid_categories": [],
-        "zone": []
-    }
+    detection = None
     stream_url = ""
     substream_url = ""
     snapshot_url = ""
     ptz = {}
 
-    def __init__(self, name, onvif_url, detection = None, cpath="/onvif/device_service", notifier = None, object_detector_queue = None):
+    def __init__(self, model: CameraModel, cpath="/onvif/device_service", notifier = None, object_detector_queue = None):
 
-        self.name = name
-        if detection != None:
-            self.detection = detection
+        self.name = model.name
+        self.detection = model.detection
 
         self.notifier = notifier
         self.object_detector_queue = object_detector_queue
-        self.db = jdb.load("{}/data/cameras.json".format(os.environ["STORAGE_PATH"]), True)
 
-        parts = urlparse(onvif_url)
-        hostname = "{}:{}".format(parts.hostname, parts.port) if parts.port else parts.hostname
-        self.client = Onvif(hostname, cpath)
+        parts = urlparse(model.onvif_url)
+        host = "{}:{}".format(parts.hostname, parts.port) if parts.port else parts.hostname
+        self.client = Onvif(host, cpath)
         self.client.set_auth(parts.username, parts.password)
         self.init_profile_tokens()
         self.setup_camera(parts.username, parts.password)
@@ -64,7 +58,7 @@ class Camera():
         self.restart_motion_detector()
 
     def restart_motion_detector(self):
-        if not self.detection["enabled"]:
+        if not self.detection.enabled:
             return
 
         log("[camera] Restart detection for camera {}".format(self.name))
@@ -104,9 +98,6 @@ class Camera():
         parts = parts._replace(netloc="{}:{}@{}:{}".format(username, password, parts.hostname, parts.port if parts.port != None else 80))
         self.snapshot_url = urlunparse(parts)
         self.ptz = self.get_ptz_features()
-
-        if self.db.exists(self.name) and self.db.dexists(self.name, "zone"):
-            self.detection["zone"] = self.db.dget(self.name, "zone")
 
     def init_profile_tokens(self):
         response = self.client.getProfiles()
@@ -182,7 +173,7 @@ class Camera():
     def get_features(self):
         return {
             "name": self.name,
-            "detection": self.detection,
+            "detection": self.detection.dict(),
             "stream_url": self.stream_url,
             "substream_url": self.substream_url,
             "ptz": self.ptz,
@@ -190,11 +181,9 @@ class Camera():
         }
 
     def set_zone(self, zone):
-        if not self.db.exists(self.name):
-            self.db.dcreate(self.name)
-
-        self.db.dadd(self.name, ("zone", zone))
-        self.detection["zone"] = zone
+        self.detection.zone = zone
+        config.get_camera(self.name).detection = self.detection
+        config.save()
 
     def set_meta(self, meta):
         self.meta = meta

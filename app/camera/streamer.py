@@ -8,6 +8,7 @@ import os
 from threading import Thread
 
 from util import log
+from models.config import config, HardwareType, CapturerType
 
 class CameraStream(Thread):
     camera = None
@@ -66,9 +67,10 @@ class CameraStream(Thread):
         stream_watcher.stop()
 
     def get_capture(self, url):
-        if os.environ["CAPTURER_TYPE"] == "gstreamer":
-            decoder = "avdec_{}".format(self.camera.codec) if os.environ["CAPTURER_HARDWARE"] == "cpu" else "vaapidecodebin"
-            return cv2.VideoCapture('rtspsrc location="{}" latency=0 protocols=GST_RTSP_LOWER_TRANS_TCP ! rtp{}depay ! {}parse ! {} ! videoconvert ! appsink'.format(url, self.camera.codec, self.camera.codec, decoder), cv2.CAP_GSTREAMER)
+        if config.capturer.type == CapturerType.gstreamer:
+            codec = "h264"
+            decoder = "avdec_{}".format(codec) if config.capturer.hardware == HardwareType.cpu else "vaapidecodebin"
+            return cv2.VideoCapture('rtspsrc location="{}" latency=0 protocols=GST_RTSP_LOWER_TRANS_TCP ! rtp{}depay ! {}parse ! {} ! videoconvert ! appsink'.format(url, codec, codec, decoder), cv2.CAP_GSTREAMER)
         else:
             return cv2.VideoCapture(url)
 

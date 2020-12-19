@@ -2,6 +2,8 @@ import os
 import jdb
 import datetime as dt
 
+from models.config import config
+
 class Clips:
     def get_clips(self, camera, rule, date):
         filepath = self.db_path(date)
@@ -34,11 +36,11 @@ class Clips:
 
     def db_path(self, timestamp):
         clip_date = dt.date.fromtimestamp(timestamp)
-        return "{}/clips/{}/{}/{}/meta.json".format(os.environ["STORAGE_PATH"], clip_date.year, clip_date.month, clip_date.day)
+        return "{}/clips/{}/{}/{}/meta.json".format(config.storage_path, clip_date.year, clip_date.month, clip_date.day)
 
     def path(self, camera, timestamp, ext):
         clip_date = dt.date.fromtimestamp(timestamp)
-        return "{}/clips/{}/{}/{}/{}/{}.{}".format(os.environ["STORAGE_PATH"], clip_date.year, clip_date.month, clip_date.day, camera, timestamp, ext)
+        return "{}/clips/{}/{}/{}/{}/{}.{}".format(config.storage_path, clip_date.year, clip_date.month, clip_date.day, camera, timestamp, ext)
 
     def generate_video_url(self, clip, type = ""):
 

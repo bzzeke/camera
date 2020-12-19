@@ -6,6 +6,7 @@ from threading import Thread
 from os.path import join, getsize
 
 from util import log
+from models.config import config
 
 class Cleanup(Thread):
 
@@ -18,8 +19,8 @@ class Cleanup(Thread):
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None):
         super(Cleanup, self).__init__(group=group, target=target, name=name)
-        self.max_size = int(os.environ["CLIPS_MAX_SIZE"])
-        self.clips_directory = "{}/clips".format(os.environ["STORAGE_PATH"])
+        self.max_size = config.detector.clips_max_size * 1024 * 1024
+        self.clips_directory = "{}/clips".format(config.storage_path)
 
 
     def run(self):
