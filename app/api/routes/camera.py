@@ -11,8 +11,9 @@ from adapters.fastapi import MediaResponse, APIException
 from models.config import config, CameraModel as ConfigCameraModel
 
 router = APIRouter()
+public_router = APIRouter()
 
-@router.get("/{cam}/snapshot")
+@public_router.get("/{cam}/snapshot")
 def snapshot(request: Request, cam: str, resize_to: int = 0):
 
     camera = request.app.camera_manager.get(cam)
@@ -49,7 +50,7 @@ def detection_zone(request: Request, cam: str, zone: ZoneModel):
     camera = request.app.camera_manager.get(cam)
     if camera:
         success = True
-        camera.set_zone(zone.dict())
+        camera.set_zone(zone.zone.dict())
 
     return {
         "success": success
@@ -61,7 +62,7 @@ def camera_list(request: Request):
 
     for camera in request.app.camera_manager.get_all():
         features = camera.get_features()
-        features["snapshot_url"] = "http://%s:%s/snapshot/%s" % (os.environ["API_SERVER_HOST"], os.environ["API_SERVER_PORT"], camera.name)
+        features["snapshot_url"] = "http://{}:{}/camera/{}/snapshot".format(os.environ["API_SERVER_HOST"], os.environ["API_SERVER_PORT"], camera.name)
         cameras.append(features)
 
     return {

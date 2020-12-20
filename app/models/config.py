@@ -58,6 +58,6 @@ class Config(BaseModel):
         return True
 
     def get_camera(self, name):
-        return filter(lambda item: item.name == name, self.cameras)[0]
+        return list(filter(lambda item: item.name == name, self.cameras)).pop()
 
 config = Config.parse_file(os.environ['CONFIG_PATH'])

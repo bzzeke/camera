@@ -8,6 +8,7 @@ from uvicorn.supervisors import ChangeReload, Multiprocess
 from uvicorn.config import Config
 from starlette.responses import JSONResponse
 from starlette.requests import Request
+from fastapi.middleware.cors import CORSMiddleware
 
 from api.auth import HTTPHeaderAuthentication
 from api.routes import auth, camera, clips, discovery
@@ -31,9 +32,18 @@ class ApiServer(Thread):
 
             protected = Depends(HTTPHeaderAuthentication())
             app.include_router(camera.router, prefix="/camera", dependencies=[protected])
+            app.include_router(camera.public_router, prefix="/camera")
             app.include_router(clips.router, prefix="/clips", dependencies=[protected])
             app.include_router(auth.router, prefix="/auth")
             app.include_router(discovery.router)
+
+            app.add_middleware(
+                CORSMiddleware,
+                allow_origins=["*"],
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
 
             config = Config(app, host=os.environ["API_SERVER_HOST"], port=int(os.environ["API_SERVER_PORT"]))
             self.server = Server(config=config)

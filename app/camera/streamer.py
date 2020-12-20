@@ -31,7 +31,7 @@ class CameraStream(Thread):
 
         ctx = zmq.Context()
         s = ctx.socket(zmq.PUB)
-        s.bind("ipc:///tmp/streamer_%s" % self.camera.name)
+        s.bind("ipc:///tmp/streamer_{}".format(self.camera.name))
 
         stream_watcher = StreamWatcher(camera_stream=self)
         stream_watcher.start()
