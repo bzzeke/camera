@@ -19,8 +19,6 @@ export default class Zone {
                 this.dragging = false;
             });
 
-
-
         this.svg.on('mouseup', (event) => {
             if(this.dragging || this.hasPolygon) return;
             this.drawing = true;
@@ -49,8 +47,9 @@ export default class Zone {
                 .attr('stroke-width', 1);
         });
 
+        this.clearPoligon();
         if (this.camera.detection.zone.length > 0) {
-            this.drawPoints(this.toScaledPoints(this.camera.zone));
+            this.drawPoints(this.toScaledPoints(this.camera.detection.zone));
         }
     }
 

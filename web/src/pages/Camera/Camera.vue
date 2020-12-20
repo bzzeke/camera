@@ -79,7 +79,15 @@ export default {
             apiClient.saveZone(this.camera.name, {
                 "zone": zone
             }).then(response => {
-                this.$toast.success("Zone saved successfully");
+
+                if (response.success) {
+                    this.$toast.success("Zone saved successfully");
+                } else {
+                    this.$toast.error("Failed to save zone");
+                }
+
+            }).catch(error => {
+               this.$toast.error("Failed to save zone: " + error);
             });
         },
 

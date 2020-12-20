@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const client = axios.create({
     baseURL: window.location.protocol + '//' + window.location.host,
-    // baseURL: "http://10.100.1.3:8000",
+    // baseURL: "http://10.10.10.179:9000",
     headers: {
         "Content-Type": "application/json",
     }
@@ -21,13 +21,13 @@ client.interceptors.request.use(authInterceptor);
 class APIClient {
 
     getCameras() {
-        return client.get('/cameras')
+        return client.get('/camera/list')
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
     }
 
     signIn(username, password) {
-        return client.post('/signin', {
+        return client.post('/auth/signin', {
             username: username,
             password: password
         })
@@ -36,7 +36,7 @@ class APIClient {
     }
 
     signUp(username, password) {
-        return client.post('/signup', {
+        return client.post('/auth/signup', {
             username: username,
             password: password
         })
@@ -45,13 +45,19 @@ class APIClient {
     }
 
     saveZone(camera, data) {
-        return client.post('/detection-zone/' + camera, data)
+        return client.post('/camera/' + camera + '/detection-zone', data)
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
     }
 
     isNew() {
-        return client.get('/is-new')
+        return client.get('/auth/is-new')
+            .then(response => Promise.resolve(response.data))
+            .catch(error => Promise.reject(error));
+    }
+
+    discovery() {
+        return client.get('/discovery')
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
     }
