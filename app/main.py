@@ -33,10 +33,17 @@ if __name__ == "__main__":
                 log("[main] Some thread is dead")
                 raise KeyboardInterrupt
 
-    except KeyboardInterrupt:
-
+    except (KeyboardInterrupt, Exception) as e:
+        log("[main] Caught exception: {}".format(str(e)))
         log("[main] Stopping all")
-        notifier.stop()
-        cleanup.stop()
-        api_server.stop()
-        camera_manager.stop()
+        if "notifier" in locals():
+            notifier.stop()
+
+        if "cleanup" in locals():
+            cleanup.stop()
+
+        if "api_server" in locals():
+            api_server.stop()
+
+        if "camera_manager" in locals():
+            camera_manager.stop()

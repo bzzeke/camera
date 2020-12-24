@@ -43,7 +43,7 @@ class ClipWriter(Thread):
             if self.start_timestamp > 0 and out == None:
                 last_timestamp = self.start_timestamp
                 self.categories = []
-                file_path = self.api.path(self.camera.name, self.start_timestamp, "mp4")
+                file_path = self.api.path(self.camera.id, self.start_timestamp, "mp4")
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
                 fourcc = cv2.VideoWriter_fourcc("a", "v", "c", "1")
@@ -66,7 +66,7 @@ class ClipWriter(Thread):
                 out.write(frame)
 
     def finish_clip(self, timestamp):
-        file_path = self.api.path(self.camera.name, timestamp, "jpeg")
+        file_path = self.api.path(self.camera.id, timestamp, "jpeg")
         if os.path.isfile(file_path):
             self.save_meta(self.categories, timestamp)
         else:
@@ -99,7 +99,7 @@ class ClipWriter(Thread):
                 cv2.rectangle(snapshot_frame, box_coords[0], box_coords[1], self.COLOR, cv2.FILLED)
                 cv2.putText(snapshot_frame, label, (text_offset_x, text_offset_y), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 0, 0), 1)
 
-        file_path = self.api.path(self.camera.name, timestamp, "jpeg")
+        file_path = self.api.path(self.camera.id, timestamp, "jpeg")
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         cv2.imwrite(file_path, snapshot_frame)
         del snapshot_frame
@@ -115,13 +115,13 @@ class ClipWriter(Thread):
             db.lcreate("clips")
 
         db.ladd("clips", {
-            "camera": self.camera.name,
+            "camera": self.camera.id,
             "start_time": timestamp,
             "objects": list(categories)
         })
 
     def cleanup(self, timestamp):
-        file_path = self.api.path(self.camera.name, timestamp, "mp4")
+        file_path = self.api.path(self.camera.id, timestamp, "mp4")
         os.remove(file_path)
 
     def stop(self):

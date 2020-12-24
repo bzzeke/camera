@@ -1,5 +1,6 @@
 import requests
 import os
+import uuid
 
 from urllib.parse import urlparse, urlunparse
 from xml.etree import ElementTree
@@ -11,21 +12,20 @@ from camera.motion_detector import MotionDetector
 from camera.streamer import CameraStream
 from homekit import HomekitCamera
 from util import log
-from models.config import config, CameraModel
+from models.config import config, CameraModel, CameraType
 
 class Camera():
 
-    client = None
-    main_stream_token = None
-    substream_token = None
-    db = None
     motion_detector = None
     object_detector_queue = None
     streamer = None
     notifier = None
-    auth_type = ""
 
+    client = None
     name = ""
+    id = ""
+    stream_url = ""
+    substream_url = ""
     meta = {
         "dtype": None,
         "shape": None,
@@ -34,26 +34,24 @@ class Camera():
         "fps": 0
     }
     detection = None
-    stream_url = ""
-    substream_url = ""
-    snapshot_url = ""
-    ptz = {}
 
-    def __init__(self, model: CameraModel, cpath="/onvif/device_service", notifier = None, object_detector_queue = None):
+    def __init__(self, model: CameraModel, notifier = None, object_detector_queue = None):
+
+
+        if model.type == CameraType.onvif:
+            self.client = OnvifCamera(model.manage_url)
+        else:
+            self.client = TestCamera(model.manage_url)
 
         self.name = model.name
         self.detection = model.detection
 
+        self.id = self.client.id
+        self.stream_url = self.client.stream_url
+        self.substream_url = self.client.substream_url
+
         self.notifier = notifier
         self.object_detector_queue = object_detector_queue
-
-        parts = urlparse(model.onvif_url)
-        host = "{}:{}".format(parts.hostname, parts.port) if parts.port else parts.hostname
-        self.client = Onvif(host, cpath)
-        self.client.set_auth(parts.username, parts.password)
-        self.init_profile_tokens()
-        self.setup_camera(parts.username, parts.password)
-
         self.start_streamer()
         self.restart_motion_detector()
 
@@ -82,22 +80,68 @@ class Camera():
         if self.motion_detector != None:
             self.motion_detector.stop()
 
-    def setup_camera(self, username, password):
-        streams = self.get_stream_urls()
-        snapshots = self.get_snapshot_urls()
+    def get_features(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "meta": self.meta,
+            "detection": self.detection.dict(),
+            "manage_url": self.client.manage_url,
+            "stream_url": self.client.stream_url,
+            "substream_url": self.client.substream_url,
+            "ptz": self.client.ptz
+        }
 
-        parts = urlparse(streams[0])
-        parts = parts._replace(netloc="{}:{}@{}:{}".format(username, password, parts.hostname, parts.port))
-        self.stream_url = urlunparse(parts)
+    def set_zone(self, zone):
+        self.detection.zone = zone
+        config.get_camera(self.id).detection = self.detection
+        config.save()
 
-        parts = urlparse(streams[1])
-        parts = parts._replace(netloc="{}:{}@{}:{}".format(username, password, parts.hostname, parts.port))
-        self.substream_url = urlunparse(parts)
+    def set_meta(self, meta):
+        self.meta = meta
 
-        parts = urlparse(snapshots[0])
-        parts = parts._replace(netloc="{}:{}@{}:{}".format(username, password, parts.hostname, parts.port if parts.port != None else 80))
-        self.snapshot_url = urlunparse(parts)
-        self.ptz = self.get_ptz_features()
+    def make_snapshot(self):
+        return self.client.make_snapshot()
+
+
+class BaseCamera():
+    id = ""
+    manage_url = ""
+    stream_url = ""
+    substream_url = ""
+    snapshot_url = ""
+    ptz = {
+        "zoom": False,
+        "pan_tilt": False
+    }
+
+    def __init__(self, manage_url):
+        self.manage_url = manage_url
+        self.id = str(uuid.uuid5(uuid.NAMESPACE_DNS, manage_url))
+
+    def make_snapshot(self):
+        return b""
+
+class OnvifCamera(BaseCamera):
+    host = ""
+    username = ""
+    password = ""
+    auth_type = ""
+
+    main_stream_token = None
+    substream_token = None
+
+    def __init__(self, manage_url, cpath="/onvif/device_service"):
+
+        super(OnvifCamera, self).__init__(manage_url)
+        parts = urlparse(manage_url)
+        self.username = parts.username or ""
+        self.password = parts.password or ""
+        self.host = "{}:{}".format(parts.hostname, parts.port) if parts.port else parts.hostname
+
+        self.client = Onvif(self.host, cpath)
+        self.client.set_auth(self.username, self.password)
+        self.init_profile_tokens()
 
     def init_profile_tokens(self):
         response = self.client.getProfiles()
@@ -170,23 +214,23 @@ class Camera():
             self.client.namespaces,
         )
 
-    def get_features(self):
-        return {
-            "name": self.name,
-            "detection": self.detection.dict(),
-            "stream_url": self.stream_url,
-            "substream_url": self.substream_url,
-            "ptz": self.ptz,
-            "meta": self.meta
-        }
 
-    def set_zone(self, zone):
-        self.detection.zone = zone
-        config.get_camera(self.name).detection = self.detection
-        config.save()
+    def setup_camera(self):
+        streams = self.get_stream_urls()
+        snapshots = self.get_snapshot_urls()
 
-    def set_meta(self, meta):
-        self.meta = meta
+        parts = urlparse(streams[0])
+        parts = parts._replace(netloc="{}:{}@{}:{}".format(username, password, parts.hostname, parts.port))
+        self.stream_url = urlunparse(parts)
+
+        parts = urlparse(streams[1])
+        parts = parts._replace(netloc="{}:{}@{}:{}".format(username, password, parts.hostname, parts.port))
+        self.substream_url = urlunparse(parts)
+
+        parts = urlparse(snapshots[0])
+        parts = parts._replace(netloc="{}:{}@{}:{}".format(username, password, parts.hostname, parts.port if parts.port != None else 80))
+        self.snapshot_url = urlunparse(parts)
+        self.ptz = self.get_ptz_features()
 
     def make_snapshot(self):
         parts = urlparse(self.snapshot_url)
@@ -201,5 +245,22 @@ class Camera():
         if response.status_code == 200:
             self.auth_type = "basic" if isinstance(auth_type, HTTPBasicAuth) else "digest"
             return response.content
+
+        return b""
+
+class TestCamera(BaseCamera):
+    stream_url = "../ai/video/backyard.mp4"
+    substream_url = "../ai/video/backyard.mp4"
+    snapshot_url = ""
+    ptz = {
+        "zoom": False,
+        "pan_tilt": False
+    }
+
+    def make_snapshot(self):
+        with open("../ai/video/snapshot.jpeg", 'rb') as fp:
+            content = fp.read()
+            print("snap: {}".format(len(content)))
+            return content
 
         return b""

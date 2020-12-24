@@ -48,22 +48,22 @@ def clips_list(request: Request, camera: str = "", rule: str = "", date: str = "
         "results": results
     }
 
-@router.get("/{cam}/video/{timestamp}", response_model=ResponseModel)
-def video(request: Request, cam: str, timestamp: int):
+@router.get("/{id}/video/{timestamp}", response_model=ResponseModel)
+def video(request: Request, id: str, timestamp: int):
 
     api = Clips()
-    filepath = api.get_video(cam, timestamp)
+    filepath = api.get_video(id, timestamp)
 
     if filepath == False:
         raise APIException(status_code=404)
 
     return MediaResponse(path=filepath, status_code=206, request_headers=request.headers)
 
-@router.get("/{cam}/thumbnail/{timestamp}", response_model=ResponseModel)
-def thumbnail(request: Request, cam: str, timestamp: int, resize_to: int = 0):
+@router.get("/{id}/thumbnail/{timestamp}", response_model=ResponseModel)
+def thumbnail(request: Request, id: str, timestamp: int, resize_to: int = 0):
 
     api = Clips()
-    filepath = api.get_thumbnail(cam, timestamp)
+    filepath = api.get_thumbnail(id, timestamp)
     if filepath == False:
         raise APIException(status_code=404)
 

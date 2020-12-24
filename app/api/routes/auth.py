@@ -1,6 +1,5 @@
 import io, os, time
 import datetime as dt
-import uuid
 
 from fastapi import APIRouter
 from starlette.requests import Request

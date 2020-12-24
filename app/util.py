@@ -35,37 +35,21 @@ def resize_image(image, new_width):
 
     return jpeg.tostring()
 
+def build_url(parts):
+    url = ""
+    if "scheme" in parts and parts["scheme"] != "":
+        url = "{}://".format(parts["scheme"])
 
-def read_config():
-    pass
-'''
-{
-"cameras": [
-    {
-        "name": "front",
-        "valid_categories": ["person", "car"],
-        "detection": true,
-        "onvif": "onvif://admin:admin@10.10.10.10",
-        "codec" - REMOVE
-    }
-],
-"server": {
-    "host": "10.10.10.10.",
-    "port": 80
-},
-"capturer": {
-    "type": "ffmpeg|gstreamer",
-    "hardware": "cpu|gpu"
-},
-"notifications": {
-    "enable": true,
-    "url": ""
-},
-"detector": {
-    "storage_path": "",
-    "clips_max_size": 100,
-    "model_path": "",
-    "inference_device": "cpu|gpu"
-}
-}
-'''
+    if "username" in parts and parts["username"] != "":
+        url = "{}{}:{}@".format(url, parts["username"], parts["password"])
+
+    if "host" in parts and parts["host"] != "":
+        url = "{}{}".format(url, parts["host"])
+
+    if "path" in parts and parts["path"] != "":
+        url = "{}{}".format(url, parts["path"])
+
+    if "query" in parts and parts["query"] != "":
+        url = "{}?{}".format(url, parts["query"])
+
+    return url

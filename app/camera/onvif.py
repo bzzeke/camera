@@ -13,6 +13,7 @@ from hashlib import sha1
 from random import SystemRandom
 
 class Onvif():
+    TIMEOUT = 5
 
     namespaces = {
         "soap": "http://schemas.xmlsoap.org/soap/envelope/",
@@ -42,7 +43,11 @@ class Onvif():
         fullmsg = '{}{}'.format(self.create_auth_header(), self.insert_in_body(bmsg))
         soapmsg = self.insert_in_invelope(fullmsg)
 
-        response = requests.post(self.onvif_url, soapmsg)
+        response = requests.post(self.onvif_url, soapmsg, timeout=self.TIMEOUT)
+
+        if response.status_code != requests.codes.ok:
+            response.raise_for_status()
+
         return response.text
 
     def create_auth_header(self):

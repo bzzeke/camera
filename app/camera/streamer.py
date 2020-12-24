@@ -31,7 +31,7 @@ class CameraStream(Thread):
 
         ctx = zmq.Context()
         s = ctx.socket(zmq.PUB)
-        s.bind("ipc:///tmp/streamer_{}".format(self.camera.name))
+        s.bind("ipc:///tmp/streamer_{}".format(self.camera.id))
 
         stream_watcher = StreamWatcher(camera_stream=self)
         stream_watcher.start()
@@ -102,6 +102,7 @@ class StreamWatcher(Thread):
         if time.time() - self.camera_stream.ts_pregrab > TIMEOUT:
             log("[stream_watcher] Looks like thread is hang up: {} - {}, {}, {}, {}".format(self.camera_stream.camera.name, self.camera_stream.ts_pregrab, self.camera_stream.ts_postgrab, self.camera_stream.ts_prezmq, self.camera_stream.ts_postzmq))
             self.camera_stream.video.release()
+            time.sleep(TIMEOUT)
 
     def stop(self):
         self.stop_flag = True

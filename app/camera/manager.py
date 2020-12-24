@@ -2,6 +2,7 @@ import os
 import queue
 
 from pyhap.accessory import Bridge
+from urllib.parse import urlparse
 
 from camera.camera import Camera
 # from camera.object_detector import ObjectDetector
@@ -41,27 +42,28 @@ class CameraManager:
         for camera in self.get_all():
             camera.start_homekit(self.homekit_bridge)
 
-    def get(self, name):
-        if name in self.cameras:
-            return self.cameras[name]
+    def get(self, id):
+        if id in self.cameras:
+            return self.cameras[id]
 
         return None
 
     def get_all(self):
         return self.cameras.values()
 
+    def is_exist(self, manage_url):
+        return len(list(filter(lambda camera: camera.client.manage_url == manage_url, self.get_all()))) > 0
+
     def add(self, model):
 
-        try:
-            camera = Camera(model, notifier=self.notifier, object_detector_queue=self.object_detector_queue)
-            self.cameras[camera.name] = camera
-            self.restart_homekit()
+        if self.is_exist(model.manage_url):
+            return False
 
-            return True
-        except Exception as e:
-            log("[manager] Failed to initialize camera: {}".format(str(e)))
+        camera = Camera(model, notifier=self.notifier, object_detector_queue=self.object_detector_queue)
+        self.cameras[camera.id] = camera
+        self.restart_homekit()
 
-        return False
+        return camera
 
     def stop(self):
         if self.homekit_worker:
@@ -72,5 +74,5 @@ class CameraManager:
             camera.stop()
 
     def start(self):
-        for camera in config.cameras:
+        for camera in config.cameras.values():
             self.add(camera)

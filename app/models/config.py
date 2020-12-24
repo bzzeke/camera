@@ -2,7 +2,7 @@ import os
 import json
 
 from pydantic import BaseModel
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 from enum import Enum
 
 class CameraDetectionModel(BaseModel):
@@ -10,9 +10,14 @@ class CameraDetectionModel(BaseModel):
     valid_categories: List[str] = []
     zone: List[int] = []
 
+class CameraType(str, Enum):
+    onvif = 'onvif'
+    test = 'test'
+
 class CameraModel(BaseModel):
     name: str
-    onvif_url: str
+    manage_url: str
+    type: CameraType = CameraType.onvif
     detection = CameraDetectionModel()
 
 class CapturerType(str, Enum):
@@ -41,7 +46,7 @@ class UserModel(BaseModel):
     password: str
 
 class Config(BaseModel):
-    cameras: List[CameraModel]
+    cameras: Dict[str, CameraModel]
     capturer: CapturerModel
     notifications: NotificationsModel
     detector: DetectorModel
@@ -57,7 +62,7 @@ class Config(BaseModel):
 
         return True
 
-    def get_camera(self, name):
-        return list(filter(lambda item: item.name == name, self.cameras)).pop()
+    def get_camera(self, id):
+        return self.cameras[id] if id in self.cameras else None
 
 config = Config.parse_file(os.environ['CONFIG_PATH'])

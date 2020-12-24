@@ -16,4 +16,4 @@ class CameraModel(BaseModel):
     name: str
     username: str
     password: str
-    hostname: str
+    host: str
