@@ -4,3 +4,5 @@ ai/*
 .DS_Store
 clips/*
 models/*
+app/test*
+storage/*
