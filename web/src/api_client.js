@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const client = axios.create({
     // baseURL: window.location.protocol + '//' + window.location.host,
-    baseURL: "http://10.100.1.3:9000",
+    baseURL: "http://10.100.1.6:9000",
     headers: {
         "Content-Type": "application/json",
     }
@@ -22,6 +22,18 @@ class APIClient {
 
     getCameras() {
         return client.get('/camera/list')
+            .then(response => Promise.resolve(response.data))
+            .catch(error => Promise.reject(error));
+    }
+
+    getClips(filters) {
+        return client.get('/clips/list', {
+            params: {
+                date: filters.date.replaceAll('-', ''),
+                camera: filters.camera,
+                rule: filters.category
+            }
+        })
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
     }
@@ -52,6 +64,12 @@ class APIClient {
 
     saveOptions(camera, data) {
         return client.post('/camera/' + camera + '/options', data)
+            .then(response => Promise.resolve(response.data))
+            .catch(error => Promise.reject(error));
+    }
+
+    removeCamera(camera) {
+        return client.delete('/camera/' + camera)
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
     }

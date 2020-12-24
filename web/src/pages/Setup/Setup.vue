@@ -3,32 +3,39 @@
     <v-row no-gutters class="d-flex justify-space-between mt-10 mb-6">
         <h1 class="page-title">Setup</h1>
     </v-row>
-    <v-row>
 
-            <v-col cols="12" md="6" v-for="host in hosts" :key="host">
+    <v-row v-if="!hosts.length">
+        <v-col cols="12" md="6" v-for="i in 4" :key="i">
             <v-card class="mx-1 mb-1">
-                <v-card-title class="pa-6 pb-3">
-                <p> {{ host }}</p>
-                <v-spacer></v-spacer>
-                </v-card-title>
-                <v-card-text class="pa-6 pt-0">
-                <v-row no-gutters>
-                    <v-col cols="12">
-
-
-                    <v-btn v-show="!isAlreadySetup(host)" color="primary" dark @click="show(host)">
-                        Setup
-                    </v-btn>
-                    <v-btn v-show="isAlreadySetup(host)" disabled>
-                        <v-icon left>mdi-check</v-icon>
-                        Added
-                    </v-btn>
-
-                    </v-col>
-                </v-row>
-                </v-card-text>
+                <v-skeleton-loader class="mx-auto pa-3" type="card"></v-skeleton-loader>
             </v-card>
-            </v-col>
+        </v-col>
+    </v-row>
+    <v-row v-if="hosts.length">
+        <v-col cols="12" md="6" v-for="host in hosts" :key="host">
+        <v-card class="mx-1 mb-1">
+            <v-card-title class="pa-6 pb-3">
+            <p> {{ host }}</p>
+            <v-spacer></v-spacer>
+            </v-card-title>
+            <v-card-text class="pa-6 pt-0">
+            <v-row no-gutters>
+                <v-col cols="12">
+
+
+                <v-btn v-show="!isAlreadySetup(host)" color="primary" dark @click="show(host)">
+                    Setup
+                </v-btn>
+                <v-btn v-show="isAlreadySetup(host)" disabled>
+                    <v-icon left>mdi-check</v-icon>
+                    Added
+                </v-btn>
+
+                </v-col>
+            </v-row>
+            </v-card-text>
+        </v-card>
+        </v-col>
     </v-row>
 
 <v-dialog v-model="dialog" persistent max-width="600px">
@@ -89,23 +96,12 @@ export default {
         }
     },
     mounted() {
-        /*apiClient.discovery().then(response => {
+        apiClient.discovery().then(response => {
             this.hosts = response.results;
         }).catch(error => {
             var message = error.response && error.response.data ? error.response.data.message : error;
             this.$toast.error("Failed to run discovery: " + message);
-        });*/
-        this.hosts = [
-            "10.10.10.1:80",
-            "10.10.10.2:90",
-            "10.10.10.4:80",
-            "10.10.10.11:80",
-            "10.10.10.21:80",
-            "10.10.10.41:80",
-            "10.10.10.15:80",
-            "10.10.10.25:80",
-            "10.10.10.45:80"
-        ];
+        });
     },
     methods: {
         ...mapMutations(['setCameras']),
@@ -123,6 +119,7 @@ export default {
             apiClient.addCamera(this.camera).then(() => {
                 this.hosts = this.hosts.filter(host => host != this.camera.host);
                 this.$toast.success("Camera was successfully added");
+                this.dialog = false;
                 apiClient.getCameras().then(response => {
                     this.setCameras(response.results);
                 });
@@ -130,7 +127,7 @@ export default {
                 var message = error.response && error.response.data ? error.response.data.message : error;
                 this.$toast.error("Failed to add camera: " + message);
             });
-            this.dialog = false;
+
         },
         isAlreadySetup(host) {
             const cameras = this.getCameras();

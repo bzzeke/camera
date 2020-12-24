@@ -11,14 +11,13 @@ from api.clips import Clips
 from adapters.fastapi import MediaResponse, APIException
 
 router = APIRouter()
+public_router = APIRouter()
 
 @router.get("/list", response_model=ResponseModel)
 def clips_list(request: Request, camera: str = "", rule: str = "", date: str = ""):
 
     api = Clips()
-    # format: /clips_list
-    # format: /clips_list/Any camera/All objects/20200620
-    # format: /clips_list/Any camera/person
+    # format: /clips/list?camera=Any%20camera&rule=All%20objects&date=20200620
     timestamp = int(time.time())
     if len(date) > 0:
         ts = dt.datetime(year=int(date[:4]), month=int(date[4:6]), day=int(date[6:]))
@@ -48,7 +47,7 @@ def clips_list(request: Request, camera: str = "", rule: str = "", date: str = "
         "results": results
     }
 
-@router.get("/{id}/video/{timestamp}", response_model=ResponseModel)
+@public_router.get("/{id}/video/{timestamp}", response_model=ResponseModel)
 def video(request: Request, id: str, timestamp: int):
 
     api = Clips()
@@ -59,7 +58,7 @@ def video(request: Request, id: str, timestamp: int):
 
     return MediaResponse(path=filepath, status_code=206, request_headers=request.headers)
 
-@router.get("/{id}/thumbnail/{timestamp}", response_model=ResponseModel)
+@public_router.get("/{id}/thumbnail/{timestamp}", response_model=ResponseModel)
 def thumbnail(request: Request, id: str, timestamp: int, resize_to: int = 0):
 
     api = Clips()

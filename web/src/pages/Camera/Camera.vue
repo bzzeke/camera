@@ -2,11 +2,13 @@
 
 <v-container fluid>
 
-
+    <v-skeleton-loader v-if="!camera" class="mx-auto pa-3" type="card"></v-skeleton-loader>
+    <div v-if="camera">
     <v-row no-gutters class="d-flex justify-space-between mt-10 mb-6">
-        <h1 class="page-title">{{ this.cameraName }}: settings</h1>
+        <h1 class="page-title">{{ this.camera.name }}: settings</h1>
 
         <div>
+            <v-btn color="secondary" class="text-capitalize mr-3" @click="remove()">Remove camera</v-btn>
             <v-btn color="primary" class="text-capitalize" @click="save()">Save</v-btn>
         </div>
 
@@ -18,13 +20,12 @@
                 <v-tab href="#options">Detection options</v-tab>
 
                 <v-tab-item value="options">
-                    <v-skeleton-loader v-if="!camera" class="mx-auto pa-3" type="card"></v-skeleton-loader>
-                    <v-card v-if="camera">
+                    <v-card>
                         <v-card-text>
                             <v-row>
                                 <v-col cols="8">
                                     <div class="img-overlay-wrap">
-                                        <img :src="snapshotURL" :width="width" :height="height">
+                                        <img :src="camera.snapshot_url" :width="camera.meta.width" :height="camera.meta.height">
                                         <svg class="container_svg" :viewBox="viewBox"></svg>
                                     </div>
                                 </v-col>
@@ -64,7 +65,7 @@
             </v-tabs>
         </v-col>
     </v-row>
-
+    </div>
 </v-container>
 </template>
 
@@ -86,55 +87,44 @@ export default {
         }
     },
     mounted() {
-        this.createZone()
+        if (this.camera == null) {
+            return;
+        }
+        this.createZone();
     },
     watch: {
-        '$route.params.id': function () {
-            this.createZone()
+        'camera': function() {
+            this.createZone();
         }
     },
     computed: {
         ...mapGetters(['getCamera']),
         camera() {
-            return this.getCamera(this.$route.params.id) || {"detection": {
-                "enabled": false,
-                "valid_categories": [],
-                "zone": []
-            }};
-        },
-        width() {
-            if (this.camera.meta == null) {
-                return 0
-            }
-            return parseInt(this.camera.meta.width / 2);
-        },
-        height() {
-            if (this.camera.meta == null) {
-                return 0
-            }
-
-            return parseInt(this.camera.meta.height / 2);
+            return this.getCamera(this.$route.params.id) || null;
         },
         viewBox() {
-            return '0 0 ' + this.width + ' ' + this.height;
-        },
-        snapshotURL() {
-            return this.camera.snapshot_url || "";
-        },
-        cameraName() {
-            return this.camera.name || "";
+            return '0 0 ' + this.camera.meta.width + ' ' + this.camera.meta.height;
         },
         enableClear() {
             return this.zone !== null && this.zone.get() != false;
         }
     },
     methods: {
-
         createZone() {
-            this.zone = new Zone(this.camera);
+            setTimeout(() => {
+                this.zone = new Zone(this.camera);
+            }, 1); // FIXME!!!
         },
         clear() {
             this.zone.clearPoligon();
+        },
+        remove() {
+            apiClient.removeCamera(this.camera.id).then(() => {
+                this.$toast.success("Camera was removed successfully");
+            }).catch(error => {
+                var message = error.response && error.response.data ? error.response.data.message : error;
+                this.$toast.error("Failed to remove camera: " + message);
+            });
         },
         save() {
             let zone = this.zone.get();

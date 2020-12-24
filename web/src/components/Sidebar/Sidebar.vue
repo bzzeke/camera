@@ -98,6 +98,11 @@ export default {
                     icon: 'mdi-home',
                     link: '/setup'
                 },
+                {
+                    title: 'Clips',
+                    icon: 'mdi-home',
+                    link: '/clips'
+                }
             ],
             sidebarWidth: 240,
             sidebarMinWidth: 96

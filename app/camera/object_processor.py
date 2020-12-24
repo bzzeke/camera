@@ -46,8 +46,8 @@ class SceneState():
 
     def __init__(self, clip_writer=None):
         self.clip_writer = clip_writer
-        self.zone = self.convert_zone(clip_writer.camera.detection["zone"])
-        self.valid_categories = clip_writer.camera.detection["valid_categories"]
+        self.zone = self.convert_zone(clip_writer.camera.detection.zone)
+        self.valid_categories = clip_writer.camera.detection.valid_categories
 
     def check_state(self, objects, frame, timestamp):
         objects = list(filter(lambda obj: self.is_detectable(obj) == True, objects))

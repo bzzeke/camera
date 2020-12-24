@@ -113,3 +113,17 @@ def add_camera(request: Request, camera: CameraModel):
         raise APIException(
             status_code=HTTP_400_BAD_REQUEST, detail=str(e)
         )
+
+@router.delete("/{id}", response_model=ResponseModel)
+def remove_camera(request: Request, id: str):
+
+    try:
+        request.app.camera_manager.remove(id)
+        del config.cameras[id]
+        config.save()
+
+    except Exception as e:
+        log("[api] Failed to remove camera: {}".format(str(e)))
+        raise APIException(
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )

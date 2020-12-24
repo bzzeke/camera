@@ -34,6 +34,7 @@ class ApiServer(Thread):
             app.include_router(camera.router, prefix="/camera", dependencies=[protected])
             app.include_router(camera.public_router, prefix="/camera")
             app.include_router(clips.router, prefix="/clips", dependencies=[protected])
+            app.include_router(clips.public_router, prefix="/clips")
             app.include_router(auth.router, prefix="/auth")
             app.include_router(discovery.router)
 

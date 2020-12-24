@@ -5,7 +5,14 @@
             <h1 class="page-title">Dashboard</h1>
         </v-row>
 
-        <v-row>
+        <v-row if="!cameras.length">
+            <v-col cols="12" md="6" v-for="i in 4" :key="i">
+                <v-card class="mx-1 mb-1">
+                    <v-skeleton-loader class="mx-auto pa-3" type="card"></v-skeleton-loader>
+                </v-card>
+            </v-col>
+        </v-row>
+        <v-row if="cameras.length">
             <v-col cols="12" md="6" v-for="camera in cameras" :key="camera.id">
             <v-card class="mx-1 mb-1">
                 <v-card-title class="pa-6 pb-3">

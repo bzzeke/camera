@@ -65,6 +65,15 @@ class CameraManager:
 
         return camera
 
+    def remove(self, id):
+        camera = self.get(id)
+        if camera:
+            camera.stop()
+            del self.cameras[camera.id]
+            return True
+
+        return False
+
     def stop(self):
         if self.homekit_worker:
             self.homekit_worker.stop()
