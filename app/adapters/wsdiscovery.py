@@ -101,4 +101,4 @@ class WSDiscovery(Daemon, DI, TN):
             else:
                 hosts.append(parts.hostname)
 
-        return hosts
+        return sorted(hosts)
