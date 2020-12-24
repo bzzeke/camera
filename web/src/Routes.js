@@ -7,6 +7,7 @@ import Layout from '@/components/Layout/Layout';
 import Dashboard from '@/pages/Dashboard/Dashboard';
 import Login from "@/pages/Login/Login";
 import Camera from "@/pages/Camera/Camera";
+import Setup from "@/pages/Setup/Setup";
 
 Vue.use(Router);
 
@@ -29,9 +30,14 @@ export default new Router({
                     component: Dashboard,
                 },
                 {
-                    path: 'camera/:name',
+                    path: 'camera/:id',
                     name: 'Camera',
                     component: Camera
+                },
+                {
+                    path: 'setup',
+                    name: 'Setup',
+                    component: Setup
                 },
             ],
         },

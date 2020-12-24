@@ -93,6 +93,11 @@ export default {
                     icon: 'mdi-home',
                     link: '/dashboard'
                 },
+                {
+                    title: 'Setup',
+                    icon: 'mdi-home',
+                    link: '/setup'
+                },
             ],
             sidebarWidth: 240,
             sidebarMinWidth: 96
@@ -120,22 +125,24 @@ export default {
     methods: {
         ...mapActions([ 'TOGGLE_DRAWER' ]),
         generateMenu() {
-            let item = {
-                title: 'Cameras',
-                model: true,
-                children: []
+            var item = this.items.find(i => i.title == 'Cameras')
+            if (!item) {
+                item = {
+                    title: 'Cameras',
+                    model: true,
+                }
+                this.items.push(item);
             }
+            item.children = [];
 
             this.cameras.forEach(camera => {
                 item.children.push({
                     title: camera.name,
                     icon: 'mdi-circle-medium',
                     color: 'primary',
-                    link: '/camera/' + camera.name
+                    link: '/camera/' + camera.id
                 })
             })
-
-            this.items.push(item);
         }
     }
 }

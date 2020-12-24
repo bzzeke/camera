@@ -5,7 +5,7 @@
         <h1 class="page-title">Zone definition for {{ this.cameraName }}</h1>
 
         <div>
-            <v-btn color="secondary" class="text-capitalize mr-2" @click="clear()">Clear</v-btn>
+            <v-btn color="secondary" class="text-capitalize mr-2" @click="clear()" :disabled="zone == null">Clear</v-btn>
             <v-btn color="primary" class="text-capitalize" @click="save()">Save</v-btn>
         </div>
 
@@ -32,15 +32,18 @@ export default {
             zone: null
         }
     },
+    mounted() {
+        this.createZone()
+    },
     watch: {
-        camera() {
-            this.zone = new Zone(this.camera);
+        '$route.params.id': function () {
+            this.createZone()
         }
     },
     computed: {
         ...mapGetters(['getCamera']),
         camera() {
-            return this.getCamera(this.$route.params.name) || {};
+            return this.getCamera(this.$route.params.id) || {};
         },
         width() {
             if (this.camera.meta == null) {
@@ -66,6 +69,9 @@ export default {
         }
     },
     methods: {
+        createZone() {
+            this.zone = new Zone(this.camera);
+        },
         clear() {
             this.zone.clearPoligon();
         },
@@ -76,18 +82,14 @@ export default {
                 return;
             }
 
-            apiClient.saveZone(this.camera.name, {
+            apiClient.saveZone(this.camera.id, {
                 "zone": zone
-            }).then(response => {
-
-                if (response.success) {
-                    this.$toast.success("Zone saved successfully");
-                } else {
-                    this.$toast.error("Failed to save zone");
-                }
-
+            }).then(() => {
+                this.$toast.success("Zone saved successfully");
+                this.camera.detection.zone = zone;
             }).catch(error => {
-               this.$toast.error("Failed to save zone: " + error);
+                var message = error.response && error.response.data ? error.response.data.message : error;
+                this.$toast.error("Failed to save zone: " + message);
             });
         },
 

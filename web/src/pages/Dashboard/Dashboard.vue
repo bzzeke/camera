@@ -6,7 +6,7 @@
         </v-row>
 
         <v-row>
-            <v-col cols="12" md="6" v-for="camera in cameras" :key="camera.name">
+            <v-col cols="12" md="6" v-for="camera in cameras" :key="camera.id">
             <v-card class="mx-1 mb-1">
                 <v-card-title class="pa-6 pb-3">
                 <p> {{ camera.name }}</p>
@@ -15,7 +15,7 @@
                 <v-card-text class="pa-6 pt-0">
                 <v-row no-gutters>
                     <v-col cols="12">
-                    <img :src="camera.snapshot_url">
+                    <v-img :src="camera.snapshot_url"></v-img>
                     </v-col>
                 </v-row>
                 </v-card-text>

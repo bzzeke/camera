@@ -27,8 +27,11 @@ export default new Vuex.Store({
         DRAWER_STATE(state) {
             return state.drawer;
         },
-        getCamera: (state) => (name) => {
-            return state.cameras.find(camera => camera.name === name);
+        getCamera: (state) => (id) => {
+            return state.cameras.find(camera => camera.id === id);
+        },
+        getCameras: (state) => {
+            return state.cameras;
         }
     }
 });
