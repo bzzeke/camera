@@ -50,8 +50,8 @@ class APIClient {
             .catch(error => Promise.reject(error));
     }
 
-    saveZone(camera, data) {
-        return client.post('/camera/' + camera + '/detection-zone', data)
+    saveOptions(camera, data) {
+        return client.post('/camera/' + camera + '/options', data)
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
     }

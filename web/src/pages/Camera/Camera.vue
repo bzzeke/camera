@@ -1,21 +1,70 @@
 <template>
+
 <v-container fluid>
 
+
     <v-row no-gutters class="d-flex justify-space-between mt-10 mb-6">
-        <h1 class="page-title">Zone definition for {{ this.cameraName }}</h1>
+        <h1 class="page-title">{{ this.cameraName }}: settings</h1>
 
         <div>
-            <v-btn color="secondary" class="text-capitalize mr-2" @click="clear()" :disabled="zone == null">Clear</v-btn>
             <v-btn color="primary" class="text-capitalize" @click="save()">Save</v-btn>
         </div>
 
     </v-row>
+
     <v-row>
-        <div class="img-overlay-wrap">
-            <img :src="snapshotURL" :width="width" :height="height">
-            <svg class="container_svg" :viewBox="viewBox"></svg>
-        </div>
+        <v-col cols="12">
+            <v-tabs>
+                <v-tab href="#options">Detection options</v-tab>
+
+                <v-tab-item value="options">
+                    <v-skeleton-loader v-if="!camera" class="mx-auto pa-3" type="card"></v-skeleton-loader>
+                    <v-card v-if="camera">
+                        <v-card-text>
+                            <v-row>
+                                <v-col cols="8">
+                                    <div class="img-overlay-wrap">
+                                        <img :src="snapshotURL" :width="width" :height="height">
+                                        <svg class="container_svg" :viewBox="viewBox"></svg>
+                                    </div>
+                                </v-col>
+                                <v-col cols="4">
+                                    <v-row>
+                                        <v-col>
+                                            <v-btn color="secondary" class="text-capitalize mr-2" @click="clear()" :disabled="!enableClear">Clear zone</v-btn>
+                                        </v-col>
+                                    </v-row>
+                                            <v-row>
+                                            <v-col>
+                                                <v-checkbox v-model="camera.detection.enabled" label="Enable detection"></v-checkbox>
+                                            </v-col>
+                                            </v-row>
+                                            <v-row>
+                                            <v-col>
+                                                <v-select v-model="camera.detection.valid_categories" :items="categories" multiple label="Categories">
+                                                    <template v-slot:prepend-item>
+                                                        <v-list-item ripple @click="selectedCategories = []">
+                                                        <v-list-item-content>
+                                                            <v-list-item-title>
+                                                            Any
+                                                            </v-list-item-title>
+                                                        </v-list-item-content>
+                                                        </v-list-item>
+                                                        <v-divider class="mt-2"></v-divider>
+                                                    </template>
+                                                </v-select>
+                                            </v-col>
+                                        </v-row>
+                                </v-col>
+                            </v-row>
+                        </v-card-text>
+                    </v-card>
+                </v-tab-item>
+
+            </v-tabs>
+        </v-col>
     </v-row>
+
 </v-container>
 </template>
 
@@ -29,7 +78,11 @@ export default {
     name: 'Camera',
     data() {
         return {
-            zone: null
+            zone: null,
+            categories: [
+                'Person',
+                'Car'
+            ]
         }
     },
     mounted() {
@@ -43,7 +96,11 @@ export default {
     computed: {
         ...mapGetters(['getCamera']),
         camera() {
-            return this.getCamera(this.$route.params.id) || {};
+            return this.getCamera(this.$route.params.id) || {"detection": {
+                "enabled": false,
+                "valid_categories": [],
+                "zone": []
+            }};
         },
         width() {
             if (this.camera.meta == null) {
@@ -66,9 +123,13 @@ export default {
         },
         cameraName() {
             return this.camera.name || "";
+        },
+        enableClear() {
+            return this.zone !== null && this.zone.get() != false;
         }
     },
     methods: {
+
         createZone() {
             this.zone = new Zone(this.camera);
         },
@@ -82,14 +143,14 @@ export default {
                 return;
             }
 
-            apiClient.saveZone(this.camera.id, {
-                "zone": zone
-            }).then(() => {
-                this.$toast.success("Zone saved successfully");
-                this.camera.detection.zone = zone;
+            this.camera.detection.zone = zone;
+
+
+            apiClient.saveOptions(this.camera.id, this.camera.detection).then(() => {
+                this.$toast.success("Options were saved successfully");
             }).catch(error => {
                 var message = error.response && error.response.data ? error.response.data.message : error;
-                this.$toast.error("Failed to save zone: " + message);
+                this.$toast.error("Failed to options: " + message);
             });
         },
 

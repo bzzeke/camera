@@ -10,7 +10,7 @@ from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR, HTTP_400_BAD_REQUES
 from util import log, resize_image, build_url
 from api.models import ResponseModel, ZoneModel, CameraModel
 from adapters.fastapi import MediaResponse, APIException
-from models.config import config, CameraModel as ConfigCameraModel, CameraType
+from models.config import config, CameraModel as ConfigCameraModel, CameraType, CameraDetectionModel
 
 router = APIRouter()
 public_router = APIRouter()
@@ -51,14 +51,14 @@ def ptz(request: Request, id: str, direction: str):
         status_code=HTTP_400_BAD_REQUEST, detail="Camera not found"
     )
 
-@router.post("/{id}/detection-zone", response_model=ResponseModel)
-def detection_zone(request: Request, id: str, zone: ZoneModel):
+@router.post("/{id}/options", response_model=ResponseModel)
+def detection_zone(request: Request, id: str, options: CameraDetectionModel):
 
     camera = request.app.camera_manager.get(id)
     if camera:
         success = True
         try:
-            camera.set_zone(zone.zone)
+            camera.set_options(options)
         except Exception as e:
             raise APIException(
                 status_code=HTTP_400_BAD_REQUEST, detail=str(e)

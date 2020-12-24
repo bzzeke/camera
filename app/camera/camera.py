@@ -92,8 +92,8 @@ class Camera():
             "ptz": self.client.ptz
         }
 
-    def set_zone(self, zone):
-        self.detection.zone = zone
+    def set_options(self, options):
+        self.detection = options
         config.get_camera(self.id).detection = self.detection
         config.save()
 

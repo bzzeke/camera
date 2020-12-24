@@ -1,7 +1,7 @@
 <template>
 <v-container fluid>
     <v-row no-gutters class="d-flex justify-space-between mt-10 mb-6">
-        <h1 class="page-title">Discovery</h1>
+        <h1 class="page-title">Setup</h1>
     </v-row>
     <v-row>
 
