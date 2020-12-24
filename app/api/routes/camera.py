@@ -92,7 +92,7 @@ def add_camera(request: Request, camera: CameraModel):
     try:
         model = ConfigCameraModel.parse_obj({
             "name": camera.name,
-            "type": CameraType.test,
+            "type": CameraType.onvif,
             "manage_url": build_url({
                 "scheme": "http",
                 "host": camera.host,

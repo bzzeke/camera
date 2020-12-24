@@ -142,6 +142,7 @@ class OnvifCamera(BaseCamera):
         self.client = Onvif(self.host, cpath)
         self.client.set_auth(self.username, self.password)
         self.init_profile_tokens()
+        self.setup_camera()
 
     def init_profile_tokens(self):
         response = self.client.getProfiles()
@@ -218,17 +219,16 @@ class OnvifCamera(BaseCamera):
     def setup_camera(self):
         streams = self.get_stream_urls()
         snapshots = self.get_snapshot_urls()
-
         parts = urlparse(streams[0])
-        parts = parts._replace(netloc="{}:{}@{}:{}".format(username, password, parts.hostname, parts.port))
+        parts = parts._replace(netloc="{}:{}@{}:{}".format(self.username, self.password, parts.hostname, parts.port))
         self.stream_url = urlunparse(parts)
 
         parts = urlparse(streams[1])
-        parts = parts._replace(netloc="{}:{}@{}:{}".format(username, password, parts.hostname, parts.port))
+        parts = parts._replace(netloc="{}:{}@{}:{}".format(self.username, self.password, parts.hostname, parts.port))
         self.substream_url = urlunparse(parts)
 
         parts = urlparse(snapshots[0])
-        parts = parts._replace(netloc="{}:{}@{}:{}".format(username, password, parts.hostname, parts.port if parts.port != None else 80))
+        parts = parts._replace(netloc="{}:{}@{}:{}".format(self.username, self.password, parts.hostname, parts.port if parts.port != None else 80))
         self.snapshot_url = urlunparse(parts)
         self.ptz = self.get_ptz_features()
 

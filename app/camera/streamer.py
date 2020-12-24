@@ -72,7 +72,7 @@ class CameraStream(Thread):
             decoder = "avdec_{}".format(codec) if config.capturer.hardware == HardwareType.cpu else "vaapidecodebin"
             return cv2.VideoCapture('rtspsrc location="{}" latency=0 protocols=GST_RTSP_LOWER_TRANS_TCP ! rtp{}depay ! {}parse ! {} ! videoconvert ! appsink'.format(url, codec, codec, decoder), cv2.CAP_GSTREAMER)
         else:
-            return cv2.VideoCapture(url)
+            return cv2.VideoCapture(url, cv2.CAP_FFMPEG)
 
     def stop(self):
         self.stop_flag = True
