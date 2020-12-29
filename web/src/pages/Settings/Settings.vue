@@ -8,10 +8,18 @@
         </template>
 
         <template v-slot:loading>
-            <v-col cols="12" v-for="i in 4" :key="i">
-                <v-card class="mx-1 mb-1">
-                    <v-skeleton-loader class="mx-auto pa-3" type="heading text@3"></v-skeleton-loader>
-                </v-card>
+
+            <v-col cols="12">
+            <v-card class="mx-1 mb-1">
+                <v-card-text>
+                    <div v-for="i in 4" :key="i">
+                        <div :class="i > 1 ? 'mt-10' : ''">
+                            <v-skeleton-loader class="mx-auto pa-3" type="heading"></v-skeleton-loader>
+                            <v-skeleton-loader class="mx-auto pa-3" type="text@4"></v-skeleton-loader>
+                        </div>
+                    </div>
+                </v-card-text>
+            </v-card>
             </v-col>
         </template>
 
@@ -19,30 +27,30 @@
             <v-col cols="12">
             <v-card class="mx-1 mb-1">
                 <v-card-text>
-            <div v-for="(option, index) in settings" :key="option.name">
-                <v-row v-if="option.type == 'header'">
-                    <v-col cols="6">
-                        <h3 :class="index > 0 ? 'mt-10' : ''">{{ option.title }}</h3>
-                    </v-col>
-                </v-row>
-                <v-row v-if="option.type == 'checkbox'">
-                    <v-col cols="6">
-                        <v-checkbox v-model="option.value" :label="option.title"></v-checkbox>
-                    </v-col>
-                </v-row>
-                <v-row v-if="option.type == 'select'">
-                    <v-col cols="6">
-                        <v-select v-model="option.value" :items="option.items" :label="option.title">
-                        </v-select>
-                    </v-col>
-                </v-row>
-                <v-row v-if="option.type == 'input'">
-                    <v-col cols="6">
-                        <v-text-field v-model="option.value" :label="option.title" hide-details="auto"></v-text-field>
-                    </v-col>
-                </v-row>
-            </div>
-            </v-card-text>
+                    <div v-for="(option, index) in settings" :key="option.name">
+                        <v-row v-if="option.type == 'header'">
+                            <v-col cols="6">
+                                <h3 :class="index > 0 ? 'mt-10' : ''">{{ option.title }}</h3>
+                            </v-col>
+                        </v-row>
+                        <v-row v-if="option.type == 'checkbox'">
+                            <v-col cols="6">
+                                <v-checkbox v-model="option.value" :label="option.title"></v-checkbox>
+                            </v-col>
+                        </v-row>
+                        <v-row v-if="option.type == 'select'">
+                            <v-col cols="6">
+                                <v-select v-model="option.value" :items="option.items" :label="option.title">
+                                </v-select>
+                            </v-col>
+                        </v-row>
+                        <v-row v-if="option.type == 'input'">
+                            <v-col cols="6">
+                                <v-text-field v-model="option.value" :label="option.title" hide-details="auto"></v-text-field>
+                            </v-col>
+                        </v-row>
+                    </div>
+                </v-card-text>
             </v-card>
             </v-col>
         </template>

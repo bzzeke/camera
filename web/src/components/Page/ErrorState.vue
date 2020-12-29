@@ -18,7 +18,7 @@ export default {
     data() {
         return {
             mdIcon: "mdi-alert-circle-outline",
-            mdLabel: "Something bad happened",
+            mdLabel: "Oops, something went wrong",
         };
     }
 };
