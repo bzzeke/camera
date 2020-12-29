@@ -31,48 +31,66 @@
         </template>
 
         <template v-slot:loading>
+            <v-col cols="12">
+                <v-card class="mx-1 mb-1 pl-2 pr-2">
+                    <v-row v-for="i in 4" :key="i">
+                        <v-col cols="12">
+                            <v-row>
+                                <v-col cols="5">
+                                    <v-skeleton-loader class="mx-auto pa-3" type="image"></v-skeleton-loader>
+                                </v-col>
+                                <v-col cols="3">
+                                    <v-skeleton-loader class="mx-auto pa-3" type="text@3"></v-skeleton-loader>
+                                </v-col>
+                            </v-row>
+                        </v-col>
+                    </v-row>
+                </v-card>
+            </v-col>
         </template>
 
         <template v-slot:data>
-            <v-card class="mx-1 mb-1 pl-2 pr-2">
-                <v-row v-for="clip in clips" :key="clip.timestamp">
-                    <v-col cols="12" md="6">
-                    <v-card class="mx-1 mb-1">
-                        <v-row>
-                        <v-col cols="5">
+            <v-col cols="12">
+                <v-card class="mx-1 mb-1 pl-2 pr-2">
+                    <v-row v-for="clip in clips" :key="clip.timestamp">
+                        <v-col cols="12">
 
-                            <v-dialog v-model="dialog" max-width="600px">
+                            <v-row>
+                            <v-col cols="5">
 
-                                <template v-slot:activator="{ on, attrs }">
-                                    <v-img :src="clip.thumbnail_url" v-bind="attrs" v-on="on"></v-img>
-                                </template>
-                                <v-card>
-                                <v-card-text>
-                                    <v-container>
-                                        <video width="320" height="240" controls>
-                                            <source :src="clip.video_url" type="video/mp4">
-                                        </video>
-                                    </v-container>
-                                </v-card-text>
-                                <v-card-actions>
-                                    <v-spacer></v-spacer>
-                                    <v-btn color="blue darken-1" text @click="dialog = false">
-                                        Close
-                                    </v-btn>
-                                </v-card-actions>
-                                </v-card>
-                            </v-dialog>
+                                <v-dialog v-model="dialog" max-width="600px">
+
+                                    <template v-slot:activator="{ on, attrs }">
+                                        <v-img :src="clip.thumbnail_url" v-bind="attrs" v-on="on"></v-img>
+                                    </template>
+                                    <v-card>
+                                    <v-card-text>
+                                        <v-container>
+                                            <video width="320" height="240" controls>
+                                                <source :src="clip.video_url" type="video/mp4">
+                                            </video>
+                                        </v-container>
+                                    </v-card-text>
+                                    <v-card-actions>
+                                        <v-spacer></v-spacer>
+                                        <v-btn color="blue darken-1" text @click="dialog = false">
+                                            Close
+                                        </v-btn>
+                                    </v-card-actions>
+                                    </v-card>
+                                </v-dialog>
+                            </v-col>
+                            <v-col cols="3">
+                                <h3>{{ formatDate(clip.timestamp) }}</h3>
+                                <h5>{{ clip.camera }}</h5>
+                                <h5>{{ formatObjects(clip.objects) }}</h5>
+                            </v-col>
+                            </v-row>
                         </v-col>
-                        <v-col cols="3">
-                            <p>{{ clip.camera }}</p>
-                            <p>{{ formatDate(clip.timestamp) }}</p>
-                            <p>{{ formatObjects(clip.objects) }}</p>
-                        </v-col>
-                        </v-row>
-                    </v-card>
-                    </v-col>
-                </v-row>
-            </v-card>
+
+                    </v-row>
+                </v-card>
+            </v-col>
         </template>
     </Page>
 </template>
@@ -103,16 +121,40 @@ export default {
                 bicycle: "🚲 "
             },
             categories: [
-                "All objects",
-                "person",
-                "car",
-                "bus"
+                {
+                    "text": "All categories",
+                    "value": ""
+                },
+                {
+                    "text": "Person",
+                    "value": "person"
+                },
+                {
+                    "text": "Car",
+                    "value": "car"
+                },
+                {
+                    "text": "Bus",
+                    "value": "bus"
+                },
+                {
+                    "text": "Truck",
+                    "value": "truck"
+                },
+                {
+                    "text": "Motorcycle",
+                    "value": "motorcycle"
+                },
+                {
+                    "text": "Bicycle",
+                    "value": "bicycle"
+                },
             ],
             menu: false,
             filters: {
                 date: new Date().toISOString().substr(0, 10),
-                category: "All objects",
-                camera: "Any camera"
+                category: "",
+                camera: ""
             }
         }
     },
@@ -130,10 +172,16 @@ export default {
     computed: {
         "cameras": function() {
             let cameras = this.getCameras().map((camera) => {
-                return camera.name
+                return {
+                    "text": camera.name,
+                    "value": camera.id
+                }
             });
 
-            cameras.unshift("Any camera");
+            cameras.unshift({
+                "text": "Any camera",
+                "value": ""
+            });
 
             return cameras;
         }

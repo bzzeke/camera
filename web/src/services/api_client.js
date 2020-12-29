@@ -66,12 +66,44 @@ class APIClient {
     }
 
     getClips(filters) {
+        /*return Promise.resolve({
+            "results": [
+                {
+                    "timestamp": 1608110809,
+                    "video_url": "http://localhost",
+                    "thumbnail_url": "http://localhost",
+                    "camera": "Test",
+                    "objects": ["person"]
+                },
+                {
+                    "timestamp": 1608110109,
+                    "video_url": "http://localhost",
+                    "thumbnail_url": "http://localhost",
+                    "camera": "Test",
+                    "objects": ["person"]
+                },
+                {
+                    "timestamp": 1608119009,
+                    "video_url": "http://localhost",
+                    "thumbnail_url": "http://localhost",
+                    "camera": "Test",
+                    "objects": ["person", "car"]
+                },
+                {
+                    "timestamp": 1608119709,
+                    "video_url": "http://localhost",
+                    "thumbnail_url": "http://localhost",
+                    "camera": "Test",
+                    "objects": ["car"]
+                }
+            ]
+        });*/
         return client.get('/clips/list', {
             cancelToken: request.token,
             params: {
                 date: filters.date.replaceAll('-', ''),
                 camera: filters.camera,
-                rule: filters.category
+                category: filters.category
             }
         })
             .then(response => Promise.resolve(response.data))

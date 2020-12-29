@@ -14,24 +14,19 @@ router = APIRouter()
 public_router = APIRouter()
 
 @router.get("/list", response_model=ResponseModel)
-def clips_list(request: Request, camera: str = "", rule: str = "", date: str = ""):
+def clips_list(request: Request, camera: str = "", category: str = "", date: str = ""):
 
     api = Clips()
-    # format: /clips/list?camera=Any%20camera&rule=All%20objects&date=20200620
+    # format: /clips/list?camera=&category=&date=20200620
     timestamp = int(time.time())
     if len(date) > 0:
         ts = dt.datetime(year=int(date[:4]), month=int(date[4:6]), day=int(date[6:]))
         timestamp = int(time.mktime(ts.timetuple()))
 
-    if camera == "Any camera":
-        camera = ""
-    if rule == "All objects":
-        rule = ""
-
     success = True
     results = []
 
-    clips = api.get_clips(camera, rule, timestamp)
+    clips = api.get_clips(camera, category, timestamp)
     if clips:
         for clip in clips:
             results.append({

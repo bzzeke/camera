@@ -5,15 +5,15 @@ import datetime as dt
 from models.config import config
 
 class Clips:
-    def get_clips(self, camera, rule, date):
+    def get_clips(self, camera, category, date):
         filepath = self.db_path(date)
         if os.path.isfile(filepath):
             db = jdb.load(filepath, True)
             clips = db.lgetall("clips")
             if camera != "":
                 clips = list(filter(lambda item: item["camera"] == camera, clips))
-            if rule != "":
-                clips = list(filter(lambda item: rule in item["objects"], clips))
+            if category != "":
+                clips = list(filter(lambda item: category in item["objects"], clips))
 
             return sorted(clips, key = lambda item: item["start_time"], reverse=True)
 
