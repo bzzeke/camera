@@ -1,20 +1,19 @@
 <template>
 
-<v-container fluid>
+<Page ref="cameraPage" :title="title">
 
-    <v-skeleton-loader v-if="!camera" class="mx-auto pa-3" type="card"></v-skeleton-loader>
-    <div v-if="camera">
-    <v-row no-gutters class="d-flex justify-space-between mt-10 mb-6">
-        <h1 class="page-title">{{ this.camera.name }}: settings</h1>
-
+    <template v-slot:buttons>
         <div>
             <v-btn color="secondary" class="text-capitalize mr-3" @click="remove()">Remove camera</v-btn>
             <v-btn color="primary" class="text-capitalize" @click="save()">Save</v-btn>
         </div>
+    </template>
 
-    </v-row>
+    <template v-slot:loading>
+        <v-skeleton-loader class="mx-auto pa-3" type="card"></v-skeleton-loader>
+    </template>
 
-    <v-row>
+    <template v-slot:data>
         <v-col cols="12">
             <v-tabs>
                 <v-tab href="#options">Detection options</v-tab>
@@ -64,19 +63,25 @@
 
             </v-tabs>
         </v-col>
-    </v-row>
-    </div>
-</v-container>
+    </template>
+</Page>
 </template>
 
 <script>
 
-import Zone from '../../logic/zone';
-import apiClient from '../../api_client';
 import { mapGetters } from 'vuex';
+
+import Zone from '@/services/zone';
+import apiClient from '@/services/api_client';
+import mixins from '@/services/mixins';
+
+import Page from '@/components/Page/Page';
+
 
 export default {
     name: 'Camera',
+    mixins: [mixins],
+    components: { Page },
     data() {
         return {
             zone: null,
@@ -90,15 +95,23 @@ export default {
         if (this.camera == null) {
             return;
         }
+        this.page('cameraPage').data();
         this.createZone();
     },
     watch: {
         'camera': function() {
+            this.page('cameraPage').data();
             this.createZone();
         }
     },
     computed: {
         ...mapGetters(['getCamera']),
+        title() {
+            if (!this.camera) {
+                return '';
+            }
+            return this.camera.name + ': settings';
+        },
         camera() {
             return this.getCamera(this.$route.params.id) || null;
         },

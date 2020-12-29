@@ -1,18 +1,15 @@
 <template>
-    <v-container fluid>
-        <div class="dashboard-page">
-        <v-row no-gutters class="d-flex justify-space-between mt-10 mb-6">
-            <h1 class="page-title">Dashboard</h1>
-        </v-row>
 
-        <v-row v-if="!cameras.length">
+    <Page ref="dashboardPage" title="Dashboard">
+        <template v-slot:loading>
             <v-col cols="12" md="6" v-for="i in 4" :key="i">
                 <v-card class="mx-1 mb-1">
                     <v-skeleton-loader class="mx-auto pa-3" type="card"></v-skeleton-loader>
                 </v-card>
             </v-col>
-        </v-row>
-        <v-row v-if="cameras.length">
+        </template>
+
+        <template v-slot:data>
             <v-col cols="12" md="6" v-for="camera in cameras" :key="camera.id">
             <v-card class="mx-1 mb-1">
                 <v-card-title class="pa-6 pb-3">
@@ -28,23 +25,28 @@
                 </v-card-text>
             </v-card>
             </v-col>
-        </v-row>
+        </template>
 
-        </div>
-    </v-container>
+    </Page>
+
 </template>
 
 <script>
 
 import { mapState } from 'vuex';
 
+import mixins from '@/services/mixins';
+
+import Page from '@/components/Page/Page';
+
 export default {
     name: "Dashboard",
-    components: {
-    },
-    data() {
-        return {
-        };
+    mixins: [mixins],
+    components: { Page },
+    watch: {
+        'cameras': function() {
+            this.page('dashboardPage').data();
+        }
     },
     computed: {
         ...mapState(['cameras']),
@@ -52,6 +54,9 @@ export default {
     methods: {
     },
     mounted() {
+        if (this.cameras) {
+           this.page('dashboardPage').data();
+        }
     },
 };
 </script>

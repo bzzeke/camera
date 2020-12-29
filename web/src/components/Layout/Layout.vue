@@ -9,12 +9,12 @@
 </template>
 
 <script>
-    import Header from '@/components/Header/Header';
-    import Sidebar from '@/components/Sidebar/Sidebar';
-    import './Layout.scss';
-    import apiClient from '../../api_client';
     import { mapMutations } from 'vuex'
 
+    import apiClient from '@/services/api_client';
+
+    import Header from '@/components/Header/Header';
+    import Sidebar from '@/components/Sidebar/Sidebar';
 
     export default {
         name: 'Layout',

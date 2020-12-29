@@ -8,6 +8,8 @@ const client = axios.create({
     }
 });
 
+const request = axios.CancelToken.source();
+
 const getAuthToken = () => localStorage.getItem('authToken'); // FIXME
 
 const authInterceptor = (config) => {
@@ -21,13 +23,51 @@ client.interceptors.request.use(authInterceptor);
 class APIClient {
 
     getCameras() {
-        return client.get('/camera/list')
-            .then(response => Promise.resolve(response.data))
-            .catch(error => Promise.reject(error));
+        return Promise.resolve({
+            "results": [
+                {
+                    "name": "Test",
+                    "id": "id",
+                    "manage_url": "http://localhost",
+                    "meta": {
+                        "width": 1600,
+                        "height": 900
+                    },
+                    "detection": {
+                        "enabled": false,
+                        "zone":[],
+                        "valid_categories": []
+                    }
+                },
+                {
+                    "name": "Test2",
+                    "id": "id2",
+                    "manage_url": "http://localhost3",
+                    "meta": {
+                        "width": 1600,
+                        "height": 900
+                    },
+                    "detection": {
+                        "enabled": false,
+                        "zone":[],
+                        "valid_categories": []
+                    }
+                }
+            ]
+        });
+        // return client.get('/camera/list', { cancelToken: request.token })
+        //     .then(response => Promise.resolve(response.data))
+        //                 .catch(error => {
+        //     if (client.isCancel(error)) {
+        //         return;
+        //     }
+        //     Promise.reject(error)
+        // });
     }
 
     getClips(filters) {
         return client.get('/clips/list', {
+            cancelToken: request.token,
             params: {
                 date: filters.date.replaceAll('-', ''),
                 camera: filters.camera,
@@ -35,7 +75,13 @@ class APIClient {
             }
         })
             .then(response => Promise.resolve(response.data))
-            .catch(error => Promise.reject(error));
+            .catch(error => {
+                if (client.isCancel(error)) {
+                    console.log('cancel');
+                    return;
+                }
+                Promise.reject(error)
+            });
     }
 
     addCamera(camera) {
@@ -75,15 +121,29 @@ class APIClient {
     }
 
     isNew() {
-        return client.get('/auth/is-new')
+        return client.get('/auth/is-new', { cancelToken: request.token })
             .then(response => Promise.resolve(response.data))
-            .catch(error => Promise.reject(error));
+            .catch(error => {
+                if (client.isCancel(error)) {
+                    return;
+                }
+                Promise.reject(error)
+            });
     }
 
     discovery() {
-        return client.get('/discovery')
+        return client.get('/discovery', { cancelToken: request.token })
             .then(response => Promise.resolve(response.data))
-            .catch(error => Promise.reject(error));
+            .catch(error => {
+                if (client.isCancel(error)) {
+                    return;
+                }
+                Promise.reject(error)
+            });
+    }
+
+    cancel() {
+        request.cancel();
     }
 }
 

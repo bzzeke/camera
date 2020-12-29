@@ -68,7 +68,7 @@
 
 <script>
 
-import apiClient from '../../api_client';
+import apiClient from '@/services/api_client';
 
 export default {
     name: 'Login',
