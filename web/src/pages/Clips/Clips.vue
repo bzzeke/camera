@@ -7,67 +7,80 @@
     </v-row>
 
     <v-row>
-        <v-col cols="12" sm="6" md="4">
-            <v-menu ref="menu" v-model="menu" :close-on-content-click="false"  transition="scale-transition" offset-y min-width="290px">
-            <template v-slot:activator="{ on, attrs }">
-                <v-text-field v-model="filters.date" label="Select date" prepend-icon="mdi-calendar" readonly v-bind="attrs" v-on="on"></v-text-field>
-            </template>
-            <v-date-picker v-model="filters.date" no-title scrollable @input="menu = false">
-            </v-date-picker>
-            </v-menu>
+        <v-col cols="12">
+            <v-card class="mx-1 mb-1 pl-2 pr-2">
+                <v-row>
+                    <v-col cols="12" sm="6" md="4">
+                        <v-menu ref="menu" v-model="menu" :close-on-content-click="false"  transition="scale-transition" offset-y min-width="290px">
+                        <template v-slot:activator="{ on, attrs }">
+                            <v-text-field v-model="filters.date" label="Select date" prepend-icon="mdi-calendar" readonly v-bind="attrs" v-on="on"></v-text-field>
+                        </template>
+                        <v-date-picker v-model="filters.date" no-title scrollable @input="menu = false">
+                        </v-date-picker>
+                        </v-menu>
+                    </v-col>
+                    <v-spacer></v-spacer>
+                    <v-col cols="12" sm="6" md="4">
+                        <v-select v-model="filters.category" :items="categories" label="Categories"></v-select>
+                    </v-col>
+                    <v-spacer></v-spacer>
+                    <v-col cols="12" sm="6" md="4">
+                        <v-select v-model="filters.camera" :items="cameras" label="Camera"></v-select>
+                    </v-col>
+                    <v-spacer></v-spacer>
+                </v-row>
+            </v-card>
         </v-col>
-        <v-spacer></v-spacer>
-        <v-col cols="12" sm="6" md="4">
-            <v-select v-model="filters.category" :items="categories" label="Categories"></v-select>
-        </v-col>
-        <v-spacer></v-spacer>
-        <v-col cols="12" sm="6" md="4">
-            <v-select v-model="filters.camera" :items="cameras" label="Camera"></v-select>
-        </v-col>
-        <v-spacer></v-spacer>
-  </v-row>
+    </v-row>
 
 
     <v-row>
         <v-col cols="12">
-        <v-row v-for="clip in clips" :key="clip.timestamp">
-            <v-col cols="12" md="6">
-            <v-card class="mx-1 mb-1">
-                <v-row>
-                <v-col cols="5">
+            <v-card class="mx-1 mb-1 pl-2 pr-2">
+                <v-row v-if="!clips.length">
+                    <v-col cols="12">
+                        No clips found
+                    </v-col>
+                </v-row>
 
+                <v-row v-for="clip in clips" :key="clip.timestamp">
+                    <v-col cols="12" md="6">
+                    <v-card class="mx-1 mb-1">
+                        <v-row>
+                        <v-col cols="5">
 
-                    <v-dialog v-model="dialog" max-width="600px">
+                            <v-dialog v-model="dialog" max-width="600px">
 
-                        <template v-slot:activator="{ on, attrs }">
-                            <v-img :src="clip.thumbnail_url" v-bind="attrs" v-on="on"></v-img>
-                        </template>
-                        <v-card>
-                        <v-card-text>
-                            <v-container>
-                                <video width="320" height="240" controls>
-                                    <source :src="clip.video_url" type="video/mp4">
-                                </video>
-                            </v-container>
-                        </v-card-text>
-                        <v-card-actions>
-                            <v-spacer></v-spacer>
-                            <v-btn color="blue darken-1" text @click="dialog = false">
-                                Close
-                            </v-btn>
-                        </v-card-actions>
-                        </v-card>
-                    </v-dialog>
-                </v-col>
-                <v-col cols="3">
-                    <p>{{ clip.camera }}</p>
-                    <p>{{ formatDate(clip.timestamp) }}</p>
-                    <p>{{ formatObjects(clip.objects) }}</p>
-                </v-col>
+                                <template v-slot:activator="{ on, attrs }">
+                                    <v-img :src="clip.thumbnail_url" v-bind="attrs" v-on="on"></v-img>
+                                </template>
+                                <v-card>
+                                <v-card-text>
+                                    <v-container>
+                                        <video width="320" height="240" controls>
+                                            <source :src="clip.video_url" type="video/mp4">
+                                        </video>
+                                    </v-container>
+                                </v-card-text>
+                                <v-card-actions>
+                                    <v-spacer></v-spacer>
+                                    <v-btn color="blue darken-1" text @click="dialog = false">
+                                        Close
+                                    </v-btn>
+                                </v-card-actions>
+                                </v-card>
+                            </v-dialog>
+                        </v-col>
+                        <v-col cols="3">
+                            <p>{{ clip.camera }}</p>
+                            <p>{{ formatDate(clip.timestamp) }}</p>
+                            <p>{{ formatObjects(clip.objects) }}</p>
+                        </v-col>
+                        </v-row>
+                    </v-card>
+                    </v-col>
                 </v-row>
             </v-card>
-            </v-col>
-        </v-row>
         </v-col>
     </v-row>
 

@@ -31,9 +31,9 @@
                 v-model="item.model"
                 append-icon="">
                 <template v-slot:prependIcon>
-                    <v-icon size="28">mdi-image-filter-none</v-icon>
+                        <v-icon size="28">{{ item.icon }}</v-icon>
                 </template>
-                <template v-slot:activator >
+                <template v-slot:activator>
                     <v-list-item-content>
                         <v-list-item-title class="grey--text">
                             {{ item.title }}
@@ -94,14 +94,21 @@ export default {
                     link: '/dashboard'
                 },
                 {
-                    title: 'Setup',
-                    icon: 'mdi-home',
-                    link: '/setup'
+                    title: 'Clips',
+                    icon: 'mdi-play',
+                    link: '/clips'
                 },
                 {
-                    title: 'Clips',
-                    icon: 'mdi-home',
-                    link: '/clips'
+                    title: 'Settings',
+                    model: true,
+                    icon: 'mdi-cog',
+                    children: [
+                        {
+                            title: 'Add camera',
+                            icon: 'mdi-plus-circle',
+                            link: '/setup'
+                        }
+                    ]
                 }
             ],
             sidebarWidth: 240,
@@ -130,20 +137,11 @@ export default {
     methods: {
         ...mapActions([ 'TOGGLE_DRAWER' ]),
         generateMenu() {
-            var item = this.items.find(i => i.title == 'Cameras')
-            if (!item) {
-                item = {
-                    title: 'Cameras',
-                    model: true,
-                }
-                this.items.push(item);
-            }
-            item.children = [];
-
+            var item = this.items.find(i => i.title == 'Settings')
             this.cameras.forEach(camera => {
-                item.children.push({
+                item.children.unshift({
                     title: camera.name,
-                    icon: 'mdi-circle-medium',
+                    icon: 'mdi-cctv',
                     color: 'primary',
                     link: '/camera/' + camera.id
                 })
