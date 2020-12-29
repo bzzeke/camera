@@ -191,7 +191,7 @@ export default {
         getClips() {
             apiClient.getClips(this.filters).then(response => {
                 this.clips = response.results;
-                this.page('clipsPage').data();
+                this.page('clipsPage').dataOrEmpty(this.clips.length);
             }).catch(error => {
                 var message = error.response && error.response.data ? error.response.data.message : error;
                 this.page('clipsPage').error(message);

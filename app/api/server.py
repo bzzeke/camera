@@ -11,7 +11,7 @@ from starlette.requests import Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.auth import HTTPHeaderAuthentication
-from api.routes import auth, camera, clips, discovery
+from api.routes import auth, camera, clips, system
 from util import log
 from adapters.fastapi import APIException
 
@@ -36,7 +36,7 @@ class ApiServer(Thread):
             app.include_router(clips.router, prefix="/clips", dependencies=[protected])
             app.include_router(clips.public_router, prefix="/clips")
             app.include_router(auth.router, prefix="/auth")
-            app.include_router(discovery.router)
+            app.include_router(system.router)
 
             app.add_middleware(
                 CORSMiddleware,

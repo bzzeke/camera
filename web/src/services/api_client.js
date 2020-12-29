@@ -23,7 +23,7 @@ client.interceptors.request.use(authInterceptor);
 class APIClient {
 
     getCameras() {
-        return Promise.resolve({
+        /*return Promise.resolve({
             "results": [
                 {
                     "name": "Test",
@@ -54,15 +54,15 @@ class APIClient {
                     }
                 }
             ]
+        });*/
+        return client.get('/camera', { cancelToken: request.token })
+            .then(response => Promise.resolve(response.data))
+                        .catch(error => {
+            if (client.isCancel(error)) {
+                return;
+            }
+            Promise.reject(error)
         });
-        // return client.get('/camera/list', { cancelToken: request.token })
-        //     .then(response => Promise.resolve(response.data))
-        //                 .catch(error => {
-        //     if (client.isCancel(error)) {
-        //         return;
-        //     }
-        //     Promise.reject(error)
-        // });
     }
 
     getClips(filters) {
@@ -98,7 +98,7 @@ class APIClient {
                 }
             ]
         });*/
-        return client.get('/clips/list', {
+        return client.get('/clips', {
             cancelToken: request.token,
             params: {
                 date: filters.date.replaceAll('-', ''),
@@ -117,7 +117,7 @@ class APIClient {
     }
 
     addCamera(camera) {
-        return client.post('/camera/add', camera)
+        return client.post('/camera', camera)
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
     }
@@ -141,7 +141,7 @@ class APIClient {
     }
 
     saveOptions(camera, data) {
-        return client.post('/camera/' + camera + '/options', data)
+        return client.post('/camera/' + camera, data)
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
     }
@@ -172,6 +172,88 @@ class APIClient {
                 }
                 Promise.reject(error)
             });
+    }
+
+    settings() {
+        /*return Promise.resolve({
+            "results": [
+                {
+                    "title": "Capturer",
+                    "type": "header",
+                },
+                {
+                    "name": "capturer_type",
+                    "title": "Type",
+                    "type": "select",
+                    "value": "ffmpeg",
+                    "items": [
+                        {"text": "FFMPEG", "value": "ffmpeg"},
+                        {"text": "GStreamer", "value": "gstreamer"}
+                    ]
+                },
+                {
+                    "name": "capturer_hardware",
+                    "title": "Hardware",
+                    "type": "select",
+                    "value": "gpu",
+                    "items": [
+                        {"text": "CPU", "value": "cpu"},
+                        {"text": "GPU", "value": "gpu"}
+                    ]
+                },
+                {
+                    "title": "Notifications",
+                    "type": "header",
+                },
+                {
+                    "name": "notifications_enable",
+                    "title": "Enable",
+                    "value": true,
+                    "type": "checkbox",
+                },
+                {
+                    "name": "notifications_url",
+                    "title": "Notify URL",
+                    "value": "http://localhost/a/b/x",
+                    "type": "input",
+                },
+                {
+                    "title": "Detector",
+                    "type": "header",
+                },
+                {
+                    "name": "detector_clips_max_size",
+                    "title": "Clips max size",
+                    "value": "100",
+                    "type": "input",
+                },
+                {
+                    "name": "detector_model_path",
+                    "title": "Model path",
+                    "value": "/srv/home/models",
+                    "type": "input",
+                },
+                {
+                    "name": "detector_hardware",
+                    "title": "Hardware",
+                    "type": "select",
+                    "value": "cpu",
+                    "items": [
+                        {"text": "CPU", "value": "cpu"},
+                        {"text": "GPU", "value": "gpu"}
+                    ]
+                },
+            ]
+        });*/
+        return client.get('/settings')
+            .then(response => Promise.resolve(response.data))
+            .catch(error => Promise.reject(error));
+    }
+
+    saveSettings(settings) {
+        return client.post('/settings', settings)
+            .then(response => Promise.resolve(response.data))
+            .catch(error => Promise.reject(error));
     }
 
     cancel() {

@@ -1,6 +1,12 @@
 <template>
+<div>
+    <Page ref="setupPage" title="Camera setup">
 
-    <Page ref="setupPage" title="Setup">
+        <template v-slot:buttons>
+            <div>
+                <v-btn color="primary" class="text-capitalize" @click="show('')">Add</v-btn>
+            </div>
+        </template>
 
         <template v-slot:loading>
             <v-col cols="12" md="6" v-for="i in 4" :key="i">
@@ -37,43 +43,43 @@
             </v-col>
         </template>
 
-        <v-dialog v-model="dialog" persistent max-width="600px">
-            <v-card>
-            <v-card-title>
-                <span class="headline">User Profile</span>
-            </v-card-title>
-            <v-card-text>
-                <v-container>
-                <v-row>
-                    <v-col cols="12">
-                        <v-text-field v-model="camera.name" label="Camera name" required></v-text-field>
-                    </v-col>
-                    <v-col cols="12">
-                        <v-text-field v-model="camera.host" label="Host" requires></v-text-field>
-                    </v-col>
-                    <v-col cols="12">
-                        <v-text-field v-model="camera.username" label="Username"></v-text-field>
-                    </v-col>
-                    <v-col cols="12">
-                        <v-text-field v-model="camera.password" label="Password" type="password"></v-text-field>
-                    </v-col>
-                </v-row>
-                </v-container>
-            </v-card-text>
-            <v-card-actions>
-                <v-spacer></v-spacer>
-                <v-btn color="blue darken-1" text @click="dialog = false">
-                    Close
-                </v-btn>
-                <v-btn color="blue darken-1" text @click="save()">
-                    Save
-                </v-btn>
-            </v-card-actions>
-            </v-card>
-        </v-dialog>
-
     </Page>
 
+    <v-dialog v-model="dialog" persistent max-width="600px">
+        <v-card>
+        <v-card-title>
+            <span class="headline">Add camera</span>
+        </v-card-title>
+        <v-card-text>
+            <v-container>
+            <v-row>
+                <v-col cols="12">
+                    <v-text-field v-model="camera.name" label="Camera name" required></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                    <v-text-field v-model="camera.host" label="Host" requires></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                    <v-text-field v-model="camera.username" label="Username"></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                    <v-text-field v-model="camera.password" label="Password" type="password"></v-text-field>
+                </v-col>
+            </v-row>
+            </v-container>
+        </v-card-text>
+        <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn color="secondary" text @click="dialog = false">
+                Close
+            </v-btn>
+            <v-btn color="primary" text @click="save()">
+                Save
+            </v-btn>
+        </v-card-actions>
+        </v-card>
+    </v-dialog>
+</div>
 </template>
 
 <script>
@@ -104,7 +110,7 @@ export default {
     mounted() {
         apiClient.discovery().then(response => {
             this.hosts = response.results;
-            this.page('setupPage').data();
+            this.page('setupPage').dataOrEmpty(this.hosts.length);
         }).catch(error => {
             var message = error.response && error.response.data ? error.response.data.message : error;
             this.page('setupPage').error(message);
@@ -114,6 +120,7 @@ export default {
         ...mapMutations(['setCameras']),
         ...mapGetters(['getCameras']),
         show(host) {
+            console.log('shoe');
             this.camera = {
                 name: "",
                 host: host,

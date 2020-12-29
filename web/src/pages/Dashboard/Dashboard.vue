@@ -45,7 +45,7 @@ export default {
     components: { Page },
     watch: {
         'cameras': function() {
-            this.page('dashboardPage').data();
+            this.page('dashboardPage').dataOrEmpty(this.cameras.length);
         }
     },
     computed: {
@@ -55,7 +55,7 @@ export default {
     },
     mounted() {
         if (this.cameras) {
-           this.page('dashboardPage').data();
+           this.page('dashboardPage').dataOrEmpty(this.cameras.length);
         }
     },
 };

@@ -4,7 +4,30 @@
 
     <template v-slot:buttons>
         <div>
-            <v-btn color="secondary" class="text-capitalize mr-3" @click="remove()">Remove camera</v-btn>
+
+            <v-dialog v-model="removeDialog" persistent width="500">
+                <template v-slot:activator="{ on, attrs }">
+                    <v-btn color="secondary" class="text-capitalize mr-3" v-bind="attrs" v-on="on">Remove camera</v-btn>
+                </template>
+
+                <v-card>
+                    <v-card-title class="headline">
+                        Please confirm
+                    </v-card-title>
+                    <v-card-text>
+                        Are you sure to remove camera?
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-spacer></v-spacer>
+                        <v-btn color="secondary" text @click="removeDialog = false">
+                            Cancel
+                        </v-btn>
+                        <v-btn color="primary" text @click="remove()">
+                            Remove
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
             <v-btn color="primary" class="text-capitalize" @click="save()">Save</v-btn>
         </div>
     </template>
@@ -15,12 +38,11 @@
 
     <template v-slot:data>
         <v-col cols="12">
-            <v-tabs>
-                <v-tab href="#options">Detection options</v-tab>
-
-                <v-tab-item value="options">
-                    <v-card>
-                        <v-card-text>
+            <v-card class="mx-1 mb-1">
+                <v-card-text>
+                    <v-tabs>
+                        <v-tab href="#options">Detection options</v-tab>
+                        <v-tab-item value="options">
                             <v-row>
                                 <v-col cols="8">
                                     <div class="img-overlay-wrap">
@@ -34,34 +56,33 @@
                                             <v-btn color="secondary" class="text-capitalize mr-2" @click="clear()" :disabled="!enableClear">Clear zone</v-btn>
                                         </v-col>
                                     </v-row>
-                                            <v-row>
-                                            <v-col>
-                                                <v-checkbox v-model="camera.detection.enabled" label="Enable detection"></v-checkbox>
-                                            </v-col>
-                                            </v-row>
-                                            <v-row>
-                                            <v-col>
-                                                <v-select v-model="camera.detection.valid_categories" :items="categories" multiple label="Categories">
-                                                    <template v-slot:prepend-item>
-                                                        <v-list-item ripple @click="selectedCategories = []">
-                                                        <v-list-item-content>
-                                                            <v-list-item-title>
-                                                            Any
-                                                            </v-list-item-title>
-                                                        </v-list-item-content>
-                                                        </v-list-item>
-                                                        <v-divider class="mt-2"></v-divider>
-                                                    </template>
-                                                </v-select>
-                                            </v-col>
-                                        </v-row>
+                                    <v-row>
+                                        <v-col>
+                                            <v-checkbox v-model="camera.detection.enabled" label="Enable detection"></v-checkbox>
+                                        </v-col>
+                                    </v-row>
+                                    <v-row>
+                                        <v-col>
+                                            <v-select v-model="camera.detection.valid_categories" :items="categories" multiple label="Categories">
+                                                <template v-slot:prepend-item>
+                                                    <v-list-item ripple @click="selectedCategories = []">
+                                                    <v-list-item-content>
+                                                        <v-list-item-title>
+                                                        Any
+                                                        </v-list-item-title>
+                                                    </v-list-item-content>
+                                                    </v-list-item>
+                                                    <v-divider class="mt-2"></v-divider>
+                                                </template>
+                                            </v-select>
+                                        </v-col>
+                                    </v-row>
                                 </v-col>
                             </v-row>
-                        </v-card-text>
-                    </v-card>
-                </v-tab-item>
-
-            </v-tabs>
+                        </v-tab-item>
+                    </v-tabs>
+                </v-card-text>
+            </v-card>
         </v-col>
     </template>
 </Page>
@@ -85,6 +106,7 @@ export default {
     data() {
         return {
             zone: null,
+            removeDialog: false,
             categories: [
                 'Person',
                 'Car'
@@ -134,9 +156,11 @@ export default {
         remove() {
             apiClient.removeCamera(this.camera.id).then(() => {
                 this.$toast.success("Camera was removed successfully");
+                this.removeDialog = false;
             }).catch(error => {
                 var message = error.response && error.response.data ? error.response.data.message : error;
                 this.$toast.error("Failed to remove camera: " + message);
+                this.removeDialog = false;
             });
         },
         save() {
@@ -147,7 +171,6 @@ export default {
             }
 
             this.camera.detection.zone = zone;
-
 
             apiClient.saveOptions(this.camera.id, this.camera.detection).then(() => {
                 this.$toast.success("Options were saved successfully");

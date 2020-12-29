@@ -99,16 +99,21 @@ export default {
                     link: '/clips'
                 },
                 {
-                    title: 'Settings',
+                    title: 'Cameras',
                     model: true,
-                    icon: 'mdi-cog',
+                    icon: 'mdi-cctv',
                     children: [
                         {
-                            title: 'Add camera',
+                            title: 'Add',
                             icon: 'mdi-plus-circle',
                             link: '/setup'
                         }
                     ]
+                },
+                {
+                    title: 'Settings',
+                    icon: 'mdi-cog',
+                    link: '/settings'
                 }
             ],
             sidebarWidth: 240,
@@ -137,7 +142,7 @@ export default {
     methods: {
         ...mapActions([ 'TOGGLE_DRAWER' ]),
         generateMenu() {
-            var item = this.items.find(i => i.title == 'Settings')
+            var item = this.items.find(i => i.title == 'Cameras')
             this.cameras.forEach(camera => {
                 item.children.unshift({
                     title: camera.name,

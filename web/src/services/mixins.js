@@ -10,6 +10,8 @@ var mixins = {
             }
 
             return {
+                dataOrEmpty() {
+                },
                 data() {
                 },
                 empty() {

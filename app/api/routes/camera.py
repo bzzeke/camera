@@ -38,7 +38,7 @@ def snapshot(request: Request, id: str, resize_to: int = 0):
         status_code=HTTP_404_NOT_FOUND, detail="Camera not found"
     )
 
-@router.post("/{id}/ptz/{direction}", response_model=ResponseModel)
+@router.post("/{id}/ptz/{direction}")
 def ptz(request: Request, id: str, direction: str):
 
     camera = request.app.camera_manager.get(id)
@@ -51,7 +51,7 @@ def ptz(request: Request, id: str, direction: str):
         status_code=HTTP_400_BAD_REQUEST, detail="Camera not found"
     )
 
-@router.post("/{id}/options", response_model=ResponseModel)
+@router.post("/{id}")
 def detection_zone(request: Request, id: str, options: CameraDetectionModel):
 
     camera = request.app.camera_manager.get(id)
@@ -72,21 +72,7 @@ def detection_zone(request: Request, id: str, options: CameraDetectionModel):
         status_code=HTTP_400_BAD_REQUEST, detail="Camera not found"
     )
 
-@router.get("/list", response_model=ResponseModel)
-def camera_list(request: Request):
-    cameras = []
-
-    for camera in request.app.camera_manager.get_all():
-        features = camera.get_features()
-        features["snapshot_url"] = "http://{}:{}/camera/{}/snapshot".format(os.environ["API_SERVER_HOST"], os.environ["API_SERVER_PORT"], camera.id)
-        cameras.append(features)
-
-    return {
-        "success": True,
-        "results": cameras
-    }
-
-@router.post("/add", response_model=ResponseModel)
+@router.post("/")
 def add_camera(request: Request, camera: CameraModel):
 
     try:
@@ -114,7 +100,7 @@ def add_camera(request: Request, camera: CameraModel):
             status_code=HTTP_400_BAD_REQUEST, detail=str(e)
         )
 
-@router.delete("/{id}", response_model=ResponseModel)
+@router.delete("/{id}")
 def remove_camera(request: Request, id: str):
 
     try:
@@ -127,3 +113,17 @@ def remove_camera(request: Request, id: str):
         raise APIException(
             status_code=HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
+
+@router.get("/")
+def camera_list(request: Request):
+    cameras = []
+
+    for camera in request.app.camera_manager.get_all():
+        features = camera.get_features()
+        features["snapshot_url"] = "http://{}:{}/camera/{}/snapshot".format(os.environ["API_SERVER_HOST"], os.environ["API_SERVER_PORT"], camera.id)
+        cameras.append(features)
+
+    return {
+        "success": True,
+        "results": cameras
+    }

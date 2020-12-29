@@ -57,6 +57,13 @@ export default {
         },
         data() {
             this.dataState = 'data';
+        },
+        dataOrEmpty(total) {
+            if (total > 0) {
+                this.data();
+            } else {
+                this.empty('');
+            }
         }
     }
 };

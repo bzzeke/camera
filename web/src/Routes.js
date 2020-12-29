@@ -9,6 +9,7 @@ import Login from "@/pages/Login/Login";
 import Camera from "@/pages/Camera/Camera";
 import Setup from "@/pages/Setup/Setup";
 import Clips from "@/pages/Clips/Clips";
+import Settings from "@/pages/Settings/Settings";
 
 Vue.use(Router);
 
@@ -44,7 +45,12 @@ export default new Router({
                     path: 'clips',
                     name: 'Clips',
                     component: Clips
-                }
+                },
+                {
+                    path: 'settings',
+                    name: 'Settings',
+                    component: Settings
+                },
             ],
         },
         {
