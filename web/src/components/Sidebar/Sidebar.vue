@@ -140,7 +140,6 @@ export default {
                 this.items.push({
                     title: camera.name,
                     icon: 'mdi-cctv',
-                    color: 'primary',
                     link: '/camera/' + camera.id
                 })
             })

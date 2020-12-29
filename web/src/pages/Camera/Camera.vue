@@ -63,17 +63,7 @@
                                     </v-row>
                                     <v-row>
                                         <v-col>
-                                            <v-select v-model="camera.detection.valid_categories" :items="categories" multiple label="Categories">
-                                                <template v-slot:prepend-item>
-                                                    <v-list-item ripple @click="selectedCategories = []">
-                                                    <v-list-item-content>
-                                                        <v-list-item-title>
-                                                        Any
-                                                        </v-list-item-title>
-                                                    </v-list-item-content>
-                                                    </v-list-item>
-                                                    <v-divider class="mt-2"></v-divider>
-                                                </template>
+                                            <v-select v-model="camera.detection.valid_categories" :items="getCategories(false)" multiple chips clearable deletable-chips placeholder="All categories included" label="Categories">
                                             </v-select>
                                         </v-col>
                                     </v-row>
@@ -106,11 +96,7 @@ export default {
     data() {
         return {
             zone: null,
-            removeDialog: false,
-            categories: [
-                'Person',
-                'Car'
-            ]
+            removeDialog: false
         }
     },
     mounted() {

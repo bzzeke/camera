@@ -17,7 +17,7 @@
                             </v-col>
                             <v-spacer></v-spacer>
                             <v-col cols="12" sm="6" md="4">
-                                <v-select v-model="filters.category" :items="categories" label="Categories"></v-select>
+                                <v-select v-model="filters.category" :items="getCategories()" label="Categories"></v-select>
                             </v-col>
                             <v-spacer></v-spacer>
                             <v-col cols="12" sm="6" md="4">
@@ -112,44 +112,6 @@ export default {
         return {
             clips: [],
             dialog: false,
-            objectIcons: {
-                person: "🚶🏻‍♂️",
-                car: "🚗",
-                bus: "🚌 ",
-                truck: "🚚",
-                motorcycle: "🏍",
-                bicycle: "🚲 "
-            },
-            categories: [
-                {
-                    "text": "All categories",
-                    "value": ""
-                },
-                {
-                    "text": "Person",
-                    "value": "person"
-                },
-                {
-                    "text": "Car",
-                    "value": "car"
-                },
-                {
-                    "text": "Bus",
-                    "value": "bus"
-                },
-                {
-                    "text": "Truck",
-                    "value": "truck"
-                },
-                {
-                    "text": "Motorcycle",
-                    "value": "motorcycle"
-                },
-                {
-                    "text": "Bicycle",
-                    "value": "bicycle"
-                },
-            ],
             menu: false,
             filters: {
                 date: new Date().toISOString().substr(0, 10),
@@ -200,7 +162,7 @@ export default {
         },
         formatObjects(objects) {
             var icons = objects.map((key) => {
-                return this.objectIcons[key];
+                return this.categoryIcons[key];
             });
 
             return icons.join(" ");
