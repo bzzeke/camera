@@ -9,6 +9,7 @@ from uvicorn.config import Config
 from starlette.responses import JSONResponse
 from starlette.requests import Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from api.auth import HTTPHeaderAuthentication
 from api.routes import auth, camera, clips, system
@@ -31,12 +32,14 @@ class ApiServer(Thread):
             app.camera_manager = self.camera_manager
 
             protected = Depends(HTTPHeaderAuthentication())
-            app.include_router(camera.router, prefix="/camera", dependencies=[protected])
-            app.include_router(camera.public_router, prefix="/camera")
-            app.include_router(clips.router, prefix="/clips", dependencies=[protected])
-            app.include_router(clips.public_router, prefix="/clips")
-            app.include_router(auth.router, prefix="/auth")
-            app.include_router(system.router)
+            app.include_router(camera.router, prefix="/api", dependencies=[protected])
+            app.include_router(camera.public_router, prefix="/api")
+            app.include_router(clips.router, prefix="/api", dependencies=[protected])
+            app.include_router(clips.public_router, prefix="/api")
+            app.include_router(auth.router, prefix="/api")
+            app.include_router(system.router, prefix="/api")
+
+            app.mount("/", StaticFiles(directory="../web/dist", html=True), name="public")
 
             app.add_middleware(
                 CORSMiddleware,

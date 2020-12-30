@@ -19,7 +19,7 @@
                 <v-card-text class="pa-6 pt-0">
                 <v-row no-gutters>
                     <v-col cols="12">
-                    <v-img :src="camera.snapshot_url"></v-img>
+                    <v-img :src="camera.snapshot_url + '?rnd=' + cacheKey"></v-img>
                     </v-col>
                 </v-row>
                 </v-card-text>
@@ -43,6 +43,12 @@ export default {
     name: "Dashboard",
     mixins: [mixins],
     components: { Page },
+    data() {
+        return {
+            interval: null,
+            cacheKey: +new Date()
+        }
+    },
     watch: {
         'cameras': function() {
             this.page('dashboardPage').dataOrEmpty(this.cameras.length);
@@ -57,7 +63,13 @@ export default {
         if (this.cameras) {
            this.page('dashboardPage').dataOrEmpty(this.cameras.length);
         }
+        this.interval = setInterval(() => {
+            this.cacheKey = +new Date();
+        }, 5 * 1000);
     },
+    destroyed() {
+        clearInterval(this.interval);
+    }
 };
 </script>
 

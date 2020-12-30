@@ -10,7 +10,7 @@ from api.auth import HTTPHeaderAuthentication, has_user, hash_credentials, get_u
 
 router = APIRouter()
 
-@router.post("/signin")
+@router.post("/auth/signin")
 def signin(request: Request, credentials: CredentialsModel):
 
     success = False
@@ -25,7 +25,7 @@ def signin(request: Request, credentials: CredentialsModel):
         "results": [token] if success else None
     }
 
-@router.post("/signup")
+@router.post("/auth/signup")
 def signup(request: Request, credentials: CredentialsModel):
 
     success = False
@@ -39,7 +39,7 @@ def signup(request: Request, credentials: CredentialsModel):
         "results": [token] if success else None
     }
 
-@router.get("/is-new")
+@router.get("/auth/is-new")
 def is_new(request: Request):
     return {
         "success": not has_user()

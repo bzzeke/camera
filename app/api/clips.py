@@ -44,7 +44,7 @@ class Clips:
 
     def generate_video_url(self, clip, type = ""):
 
-        url = "http://{}:{}/clips/{}/{}/{}".format(
+        url = "http://{}:{}/api/clips/{}/{}/{}".format(
             os.environ["API_SERVER_HOST"],
             os.environ["API_SERVER_PORT"],
             clip["camera"],

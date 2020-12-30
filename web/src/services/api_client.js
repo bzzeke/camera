@@ -19,14 +19,14 @@ client.interceptors.request.use(authInterceptor);
 class APIClient {
 
     getCameras() {
-        return client.get('/camera')
+        return client.get('/api/camera')
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
 
     }
 
     getClips(filters) {
-        return client.get('/clips', {
+        return client.get('/api/clips', {
             params: {
                 date: filters.date.replaceAll('-', ''),
                 camera: filters.camera,
@@ -38,13 +38,13 @@ class APIClient {
     }
 
     addCamera(camera) {
-        return client.post('/camera', camera)
+        return client.post('/api/camera', camera)
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
     }
 
     signIn(username, password) {
-        return client.post('/auth/signin', {
+        return client.post('/api/auth/signin', {
             username: username,
             password: password
         })
@@ -53,7 +53,7 @@ class APIClient {
     }
 
     signUp(username, password) {
-        return client.post('/auth/signup', {
+        return client.post('/api/auth/signup', {
             username: username,
             password: password
         })
@@ -62,43 +62,43 @@ class APIClient {
     }
 
     saveOptions(camera, data) {
-        return client.post('/camera/' + camera, data)
+        return client.post('/api/camera/' + camera, data)
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
     }
 
     removeCamera(camera) {
-        return client.delete('/camera/' + camera)
+        return client.delete('/api/camera/' + camera)
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
     }
 
     isNew() {
-        return client.get('/auth/is-new')
+        return client.get('/api/auth/is-new')
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
     }
 
     discovery() {
-        return client.get('/discovery')
+        return client.get('/api/discovery')
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
     }
 
     settings() {
-        return client.get('/settings')
+        return client.get('/api/settings')
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
     }
 
     saveSettings(settings) {
-        return client.post('/settings', settings)
+        return client.post('/api/settings', settings)
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
     }
 
     homekit() {
-        return client.get('/camera/homekit')
+        return client.get('/api/camera/homekit')
         .then(response => Promise.resolve(response.data))
         .catch(error => Promise.reject(error));
     }

@@ -13,7 +13,7 @@ from adapters.fastapi import MediaResponse, APIException
 router = APIRouter()
 public_router = APIRouter()
 
-@router.get("/")
+@router.get("/clips")
 def clips_list(request: Request, camera: str = "", category: str = "", date: str = ""):
 
     api = Clips()
@@ -42,7 +42,7 @@ def clips_list(request: Request, camera: str = "", category: str = "", date: str
         "results": results
     }
 
-@public_router.get("/{id}/video/{timestamp}")
+@public_router.get("/clips/{id}/video/{timestamp}")
 def video(request: Request, id: str, timestamp: int):
 
     api = Clips()
@@ -53,7 +53,7 @@ def video(request: Request, id: str, timestamp: int):
 
     return MediaResponse(path=filepath, status_code=206, request_headers=request.headers)
 
-@public_router.get("/{id}/thumbnail/{timestamp}")
+@public_router.get("/clips/{id}/thumbnail/{timestamp}")
 def thumbnail(request: Request, id: str, timestamp: int, resize_to: int = 0):
 
     api = Clips()

@@ -15,7 +15,7 @@ from models.config import config, CameraModel as ConfigCameraModel, CameraType, 
 router = APIRouter()
 public_router = APIRouter()
 
-@public_router.get("/{id}/snapshot")
+@public_router.get("/camera/{id}/snapshot")
 def snapshot(request: Request, id: str, resize_to: int = 0):
 
     camera = request.app.camera_manager.get(id)
@@ -38,7 +38,7 @@ def snapshot(request: Request, id: str, resize_to: int = 0):
         status_code=HTTP_404_NOT_FOUND, detail="Camera not found"
     )
 
-@router.post("/{id}/ptz/{direction}")
+@router.post("/camera/{id}/ptz/{direction}")
 def ptz(request: Request, id: str, direction: str):
 
     camera = request.app.camera_manager.get(id)
@@ -51,7 +51,7 @@ def ptz(request: Request, id: str, direction: str):
         status_code=HTTP_400_BAD_REQUEST, detail="Camera not found"
     )
 
-@router.post("/{id}")
+@router.post("/camera/{id}")
 def detection_zone(request: Request, id: str, options: CameraDetectionModel):
 
     camera = request.app.camera_manager.get(id)
@@ -72,7 +72,7 @@ def detection_zone(request: Request, id: str, options: CameraDetectionModel):
         status_code=HTTP_400_BAD_REQUEST, detail="Camera not found"
     )
 
-@router.post("/")
+@router.post("/camera")
 def add_camera(request: Request, camera: CameraModel):
 
     try:
@@ -103,7 +103,7 @@ def add_camera(request: Request, camera: CameraModel):
             status_code=HTTP_400_BAD_REQUEST, detail=str(e)
         )
 
-@router.delete("/{id}")
+@router.delete("/camera/{id}")
 def remove_camera(request: Request, id: str):
 
     try:
@@ -117,7 +117,7 @@ def remove_camera(request: Request, id: str):
             status_code=HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
 
-@router.get("/")
+@router.get("/camera")
 def camera_list(request: Request):
     cameras = []
 
@@ -129,7 +129,7 @@ def camera_list(request: Request):
         "results": cameras
     }
 
-@router.get("/homekit")
+@router.get("/camera/homekit")
 def homekit(request: Request):
 
     bridge = request.app.camera_manager.homekit_bridge
