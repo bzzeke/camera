@@ -127,3 +127,23 @@ def camera_list(request: Request):
         "success": True,
         "results": cameras
     }
+
+@router.get("/homekit")
+def homekit(request: Request):
+
+    bridge = request.app.camera_manager.homekit_bridge
+    if not bridge:
+        raise APIException(
+            status_code=HTTP_400_BAD_REQUEST, detail="Camera bridge is not started as you do not have any camera added yet"
+        )
+
+    xhm_uri = bridge.xhm_uri()
+    return {
+        "success": True,
+        "results": [{
+            "pincode": bridge.driver.state.pincode.decode(),
+            "xhm_uri": bridge.xhm_uri()
+        }]
+    }
+
+

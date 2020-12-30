@@ -231,6 +231,12 @@ class APIClient {
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
     }
+
+    homekit() {
+        return client.get('/camera/homekit')
+        .then(response => Promise.resolve(response.data))
+        .catch(error => Promise.reject(error));
+    }
 }
 
 const apiClient = new APIClient();
