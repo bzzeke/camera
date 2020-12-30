@@ -92,7 +92,10 @@ def add_camera(request: Request, camera: CameraModel):
         config.save()
 
         return {
-            "success": True
+            "success": True,
+            "results": [
+                camera.get_features()
+            ]
         }
 
     except Exception as e:
@@ -119,9 +122,7 @@ def camera_list(request: Request):
     cameras = []
 
     for camera in request.app.camera_manager.get_all():
-        features = camera.get_features()
-        features["snapshot_url"] = "http://{}:{}/camera/{}/snapshot".format(os.environ["API_SERVER_HOST"], os.environ["API_SERVER_PORT"], camera.id)
-        cameras.append(features)
+        cameras.append(camera.get_features())
 
     return {
         "success": True,

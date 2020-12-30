@@ -7,7 +7,7 @@
 
             <v-dialog v-model="removeDialog" persistent width="500">
                 <template v-slot:activator="{ on, attrs }">
-                    <v-btn color="secondary" class="text-capitalize mr-3" v-bind="attrs" v-on="on">Remove camera</v-btn>
+                    <v-btn color="secondary" class="text-capitalize mr-3" :disabled="camera == null" v-bind="attrs" v-on="on">Remove camera</v-btn>
                 </template>
 
                 <v-card>
@@ -28,12 +28,17 @@
                     </v-card-actions>
                 </v-card>
             </v-dialog>
-            <v-btn color="primary" class="text-capitalize" @click="save()">Save</v-btn>
+            <v-btn color="primary" class="text-capitalize" @click="save()" :disabled="camera == null">Save</v-btn>
         </div>
     </template>
 
     <template v-slot:loading>
-        <v-skeleton-loader class="mx-auto pa-3" type="card"></v-skeleton-loader>
+        <v-col cols="8">
+            <v-skeleton-loader class="mx-auto pa-3" type="image"></v-skeleton-loader>
+        </v-col>
+        <v-col cols="4">
+            <v-skeleton-loader class="mx-auto pa-3" type="text@5"></v-skeleton-loader>
+        </v-col>
     </template>
 
     <template v-slot:data>
@@ -80,7 +85,7 @@
 
 <script>
 
-import { mapGetters } from 'vuex';
+import { mapGetters, mapMutations } from 'vuex';
 
 import Zone from '@/services/zone';
 import apiClient from '@/services/api_client';
@@ -100,16 +105,11 @@ export default {
         }
     },
     mounted() {
-        if (this.camera == null) {
-            return;
-        }
-        this.page('cameraPage').data();
-        this.createZone();
+        this.initCamera();
     },
     watch: {
         'camera': function() {
-            this.page('cameraPage').data();
-            this.createZone();
+            this.initCamera();
         }
     },
     computed: {
@@ -131,7 +131,14 @@ export default {
         }
     },
     methods: {
-        createZone() {
+        ...mapMutations(['removeCamera']),
+        initCamera() {
+            if (!this.camera) {
+                return;
+            }
+
+            this.page('cameraPage').data();
+
             setTimeout(() => {
                 this.zone = new Zone(this.camera);
             }, 1); // FIXME!!!
@@ -143,6 +150,8 @@ export default {
             apiClient.removeCamera(this.camera.id).then(() => {
                 this.$toast.success("Camera was removed successfully");
                 this.removeDialog = false;
+                this.removeCamera(this.camera.id);
+                this.$router.push('/dashboard');
             }).catch(error => {
                 var message = error.response && error.response.data ? error.response.data.message : error;
                 this.$toast.error("Failed to remove camera: " + message);

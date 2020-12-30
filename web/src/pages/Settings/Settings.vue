@@ -3,7 +3,7 @@
     <Page ref="settingsPage" title="Settings">
         <template v-slot:buttons>
             <div>
-                <v-btn color="primary" class="text-capitalize" @click="save()">Save</v-btn>
+                <v-btn color="primary" class="text-capitalize" @click="save()" :disabled="!settings">Save</v-btn>
             </div>
         </template>
 
@@ -85,7 +85,7 @@ export default {
     components: { Page, VueQrcode },
     data() {
         return {
-            settings: [],
+            settings: null,
             homekit: null
         }
     },
@@ -100,6 +100,9 @@ export default {
 
         apiClient.homekit().then(response => {
             this.homekit = response.results[0];
+        }).catch(error => {
+            var message = error.response && error.response.data ? error.response.data.message : error;
+            console.log(message);
         });
     },
     methods: {

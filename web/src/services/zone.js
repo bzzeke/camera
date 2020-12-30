@@ -5,14 +5,15 @@ export default class Zone {
     constructor (camera) {
         this.color = ''
         this.camera = camera;
-        this.scaleFactor = 2;
+        this.scaleFactor = 1;
         this.hasPolygon = false;
         this.dragging = false;
         this.drawing = false;
         this.startPoint = null;
         this.svg = d3.select(".container_svg");
         this.points = [];
-        this.g = null
+        this.nodeRadius = 10;
+        this.g = null;
         this.dragger = d3.drag()
             .on('drag', this.handleDrag)
             .on('end', function(){
@@ -67,7 +68,7 @@ export default class Zone {
                 .append('circle')
                 .attr('cx', this.points[i][0])
                 .attr('cy', this.points[i][1])
-                .attr('r', 4)
+                .attr('r', this.nodeRadius)
                 .attr('fill', '#FDBC07')
                 .attr('stroke', '#000')
                 .attr('is-handle', 'true')
@@ -116,7 +117,7 @@ export default class Zone {
             this.g.append('circle')
                 .attr('cx', this.points[i][0])
                 .attr('cy', this.points[i][1])
-                .attr('r', 4)
+                .attr('r', this.nodeRadius)
                 .attr('fill', 'yellow')
                 .attr('stroke', '#000')
                 .attr('is-handle', 'true')

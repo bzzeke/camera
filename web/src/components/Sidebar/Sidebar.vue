@@ -136,6 +136,7 @@ export default {
     methods: {
         ...mapActions([ 'TOGGLE_DRAWER' ]),
         generateMenu() {
+            this.items.splice(5);
             this.cameras.forEach(camera => {
                 this.items.push({
                     title: camera.name,

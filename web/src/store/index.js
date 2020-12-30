@@ -1,13 +1,15 @@
 import Vue from 'vue';
 import Vuex from 'vuex';
+import apiClient from '@/services/api_client';
 
 Vue.use(Vuex);
 
-export default new Vuex.Store({
+const store = new Vuex.Store({
 
     namespace: true,
     state: {
         drawer: true,
+        authToken: null,
         cameras: []
     },
     mutations: {
@@ -16,6 +18,15 @@ export default new Vuex.Store({
         },
         setCameras(state, cameras) {
             state.cameras = cameras;
+        },
+        addCamera(state, cameras) {
+            state.cameras.push(cameras[0]); // FIXME
+        },
+        removeCamera(state, id) {
+            state.cameras = state.cameras.filter(item => item.id != id);
+        },
+        setAuthToken(state, newToken) {
+            state.authToken = newToken;
         }
     },
     actions: {
@@ -32,6 +43,19 @@ export default new Vuex.Store({
         },
         getCameras: (state) => {
             return state.cameras;
+        },
+        getAuthToken: (state) => {
+            return state.authToken;
         }
     }
 });
+
+store.watch((state) => state.authToken, (newValue) => {
+    if (newValue != "") {
+        apiClient.getCameras().then(response => {
+            store.commit('setCameras', response.results);
+        });
+    }
+});
+
+export default store;

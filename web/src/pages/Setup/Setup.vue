@@ -117,10 +117,9 @@ export default {
         });
     },
     methods: {
-        ...mapMutations(['setCameras']),
+        ...mapMutations(['setCameras', 'addCamera']),
         ...mapGetters(['getCameras']),
         show(host) {
-            console.log('shoe');
             this.camera = {
                 name: "",
                 host: host,
@@ -130,13 +129,12 @@ export default {
             this.dialog = true;
         },
         save() {
-            apiClient.addCamera(this.camera).then(() => {
+            apiClient.addCamera(this.camera).then(response => {
                 this.hosts = this.hosts.filter(host => host != this.camera.host);
                 this.$toast.success("Camera was successfully added");
                 this.dialog = false;
-                apiClient.getCameras().then(response => {
-                    this.setCameras(response.results);
-                });
+                this.addCamera(response.results);
+
             }).catch(error => {
                 var message = error.response && error.response.data ? error.response.data.message : error;
                 this.$toast.error("Failed to add camera: " + message);

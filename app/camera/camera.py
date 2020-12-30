@@ -42,6 +42,13 @@ class Camera():
             self.client = OnvifCamera(model.manage_url)
         else:
             self.client = TestCamera(model.manage_url)
+            self.meta = {
+                "dtype": None,
+                "shape": None,
+                "width": 1920,
+                "height": 1080,
+                "fps": 10
+            }
 
         self.name = model.name
         self.detection = model.detection
@@ -89,7 +96,8 @@ class Camera():
             "manage_url": self.client.manage_url,
             "stream_url": self.client.stream_url,
             "substream_url": self.client.substream_url,
-            "ptz": self.client.ptz
+            "ptz": self.client.ptz,
+            "snapshot_url": "http://{}:{}/camera/{}/snapshot".format(os.environ["API_SERVER_HOST"], os.environ["API_SERVER_PORT"], self.id)
         }
 
     def set_options(self, options):
