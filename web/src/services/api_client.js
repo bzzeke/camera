@@ -1,4 +1,5 @@
 import axios from 'axios';
+import token from '@/services/token';
 
 const client = axios.create({
     // baseURL: window.location.protocol + '//' + window.location.host,
@@ -8,12 +9,8 @@ const client = axios.create({
     }
 });
 
-const request = axios.CancelToken.source();
-
-const getAuthToken = () => localStorage.getItem('authToken'); // FIXME
-
 const authInterceptor = (config) => {
-    config.headers['Authorization'] = getAuthToken();
+    config.headers['Authorization'] = token.get();
     return config;
 }
 
@@ -55,14 +52,10 @@ class APIClient {
                 }
             ]
         });*/
-        return client.get('/camera', { cancelToken: request.token })
+        return client.get('/camera')
             .then(response => Promise.resolve(response.data))
-                        .catch(error => {
-            if (client.isCancel(error)) {
-                return;
-            }
-            Promise.reject(error)
-        });
+            .catch(error => Promise.reject(error));
+
     }
 
     getClips(filters) {
@@ -99,7 +92,6 @@ class APIClient {
             ]
         });*/
         return client.get('/clips', {
-            cancelToken: request.token,
             params: {
                 date: filters.date.replaceAll('-', ''),
                 camera: filters.camera,
@@ -107,13 +99,7 @@ class APIClient {
             }
         })
             .then(response => Promise.resolve(response.data))
-            .catch(error => {
-                if (client.isCancel(error)) {
-                    console.log('cancel');
-                    return;
-                }
-                Promise.reject(error)
-            });
+            .catch(error => Promise.reject(error));
     }
 
     addCamera(camera) {
@@ -153,25 +139,15 @@ class APIClient {
     }
 
     isNew() {
-        return client.get('/auth/is-new', { cancelToken: request.token })
+        return client.get('/auth/is-new')
             .then(response => Promise.resolve(response.data))
-            .catch(error => {
-                if (client.isCancel(error)) {
-                    return;
-                }
-                Promise.reject(error)
-            });
+            .catch(error => Promise.reject(error));
     }
 
     discovery() {
-        return client.get('/discovery', { cancelToken: request.token })
+        return client.get('/discovery')
             .then(response => Promise.resolve(response.data))
-            .catch(error => {
-                if (client.isCancel(error)) {
-                    return;
-                }
-                Promise.reject(error)
-            });
+            .catch(error => Promise.reject(error));
     }
 
     settings() {
@@ -254,10 +230,6 @@ class APIClient {
         return client.post('/settings', settings)
             .then(response => Promise.resolve(response.data))
             .catch(error => Promise.reject(error));
-    }
-
-    cancel() {
-        request.cancel();
     }
 }
 

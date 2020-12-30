@@ -45,31 +45,30 @@
 
 <script>
 import {mapActions, mapState} from 'vuex'
+import config from '@/config';
+import auth from '@/services/auth';
 
-  import config from '@/config';
-
-  export default {
+export default {
     name: 'Header',
-    components: {  },
     data: () => ({
-      config,
+        config,
     }),
     computed: {
-      ...mapState(['drawer']),
-      DRAWER_STATE :{
-        get() {
-          return this.drawer
-        },
-      }
+        ...mapState(['drawer']),
+        DRAWER_STATE :{
+            get() {
+                return this.drawer
+            },
+        }
     },
     methods: {
-      ...mapActions([ 'TOGGLE_DRAWER' ]),
-      signOut: function () {
-        window.localStorage.removeItem('authToken');
-        this.$router.push('/login');
-      }
+        ...mapActions([ 'TOGGLE_DRAWER' ]),
+        signOut: function () {
+            auth.signOut();
+            this.$router.push('/login');
+        }
     }
-  };
+};
 </script>
 
 <style src="./Header.scss" lang="scss"></style>

@@ -40,6 +40,7 @@
                                 type="password"
                                 label="Password"
                                 required
+                                v-on:keyup.enter="!buttonDisabled ? authorize() : null"
                             ></v-text-field>
 
                             </v-col>
@@ -47,7 +48,7 @@
                             <v-btn
                                 class="text-capitalize"
                                 large
-                                :disabled="password.length === 0 || email.length === 0"
+                                :disabled="buttonDisabled"
                                 color="primary"
                                 @click="authorize"
                             >
@@ -69,6 +70,7 @@
 <script>
 
 import apiClient from '@/services/api_client';
+import auth from '@/services/auth';
 
 export default {
     name: 'Login',
@@ -77,7 +79,7 @@ export default {
             authState: 'loading',
             email: '',
             password: '',
-
+            requesting: false,
             emailRules: [
                 v => !!v || 'E-mail is required',
                 v => /.+@.+/.test(v) || 'E-mail must be valid',
@@ -86,9 +88,15 @@ export default {
             welcomeText: ''
         }
     },
+    computed: {
+        buttonDisabled() {
+            return this.password.length === 0 || this.email.length === 0 || this.requesting;
+        }
+    },
     methods: {
 
         authorize() {
+            this.requesting = true;
             if (this.authState == 'signup') {
                 this.signUp();
             } else {
@@ -96,49 +104,60 @@ export default {
             }
         },
         signIn(){
-            apiClient.signIn(this.email, this.password).then(response => {
+            auth.signIn(this.email, this.password)
+                .then(response => {
                     if (response.success) {
-                        this.signInAndRedirect(response.results[0]);
+                        this.$router.push('/dashboard');
                         return;
                     }
 
                     this.$toast.error("Failed to sign in: incorrect email or password");
+                    this.requesting = false;
+                })
+                .catch(error => {
+                    var message = error.response && error.response.data ? error.response.data.message : error;
+                    this.$toast.error("Failed to sign in: " + message);
+                    this.requesting = false;
                 });
-
         },
         signUp(){
-            apiClient.signUp(this.email, this.password).then(response => {
+            auth.signUp(this.email, this.password)
+                .then(response => {
                     if (response.success) {
-                        this.signInAndRedirect(response.results[0]);
+                        this.$router.push('/dashboard');
                         return;
                     }
 
                     this.$toast.error("Failed to sign up: account is already created. Please sign in.");
+                    this.requesting = false;
+                })
+                .catch(error => {
+                    var message = error.response && error.response.data ? error.response.data.message : error;
+                    this.$toast.error("Failed to sign up: " + message);
+                    this.requesting = false;
                 });
-
-        },
-        signInAndRedirect(token) {
-            window.localStorage.setItem('authToken', token);
-            this.$router.push('/dashboard');
         }
-
     },
     created() {
 
-        apiClient.isNew().then(response => {
+        apiClient.isNew()
+            .then(response => {
+                if (response.success) {
+                    this.authState = 'signup';
+                    this.welcomeText = 'Please create account';
+                    this.buttonText = 'Sign up'
+                } else {
+                    this.authState = 'signin';
+                    this.welcomeText = 'Please sign in';
+                    this.buttonText = 'Sign in'
+                }
+            })
+            .catch(error => {
+                var message = error.response && error.response.data ? error.response.data.message : error;
+                this.$toast.error("Failed to get account info: " + message);
+            });
 
-            if (response.success) {
-                this.authState = 'signup';
-                this.welcomeText = 'Please create account';
-                this.buttonText = 'Sign up'
-            } else {
-                this.authState = 'signin';
-                this.welcomeText = 'Please sign in';
-                this.buttonText = 'Sign in'
-            }
-        });
-
-        if (window.localStorage.getItem('authToken')) {
+        if (auth.isAuthenticated()) {
             this.$router.push('/dashboard');
         }
     }
