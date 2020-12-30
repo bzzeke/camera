@@ -2,7 +2,7 @@ module.exports = {
     "transpileDependencies": [
         "vuetify"
     ],
-    publicPath: '/camera-server/',
+    publicPath: '/',
     chainWebpack: config => {
         config
             .plugin('html')
