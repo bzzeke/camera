@@ -5,6 +5,9 @@ from pydantic import BaseModel
 from typing import List, Optional, Any, Dict
 from enum import Enum
 
+storage_path = os.path.realpath(os.path.dirname(os.path.realpath(__file__) + "/../../../storage/"))
+config_path = "{}/data/config.json".format(storage_path)
+
 class CameraDetectionModel(BaseModel):
     enabled = False
     valid_categories: List[str] = []
@@ -37,32 +40,35 @@ class NotificationsModel(BaseModel):
     url = ""
 
 class DetectorModel(BaseModel):
-    model_path: str
+    model_path: str = "{}/models/yolo-v2-tf.xml".format(storage_path)
     clips_max_size = 500
     inference_device: HardwareType = HardwareType.cpu
 
 class UserModel(BaseModel):
-    username: str
-    password: str
+    username: str = ""
+    password: str = ""
 
 class Config(BaseModel):
-    cameras: Dict[str, CameraModel]
-    capturer: CapturerModel
-    notifications: NotificationsModel
-    detector: DetectorModel
-    user: UserModel
-    storage_path: str
+    cameras: Dict[str, CameraModel] = {}
+    capturer: CapturerModel = CapturerModel()
+    notifications: NotificationsModel = NotificationsModel()
+    detector: DetectorModel = DetectorModel()
+    user: UserModel = UserModel()
 
     def save(self):
-        loco = os.environ['CONFIG_PATH']
-        tmp_file = "{}.tmp".format(loco)
+        tmp_file = "{}.tmp".format(config_path)
         json.dump(self.dict(), open(tmp_file, 'wt'), indent=4)
 
-        os.rename(tmp_file, loco)
+        os.rename(tmp_file, config_path)
 
         return True
 
     def get_camera(self, id):
         return self.cameras[id] if id in self.cameras else None
 
-config = Config.parse_file(os.environ['CONFIG_PATH'])
+
+if os.path.isfile(config_path):
+    config = Config.parse_file(config_path)
+else:
+    config = Config()
+    config.save()

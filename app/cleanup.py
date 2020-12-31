@@ -6,21 +6,22 @@ from threading import Thread
 from os.path import join, getsize
 
 from util import log
+from api.clips import Clips
 from models.config import config
 
 class Cleanup(Thread):
 
     current_size = 0
     max_size = 0
-    clips_directory = ""
+    api = None
     period = 5 * 60 * 60 # seconds
     stop_flag = False
     regex = re.compile("[0-9]+\\.(jpeg|mp4)")
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None):
         super(Cleanup, self).__init__(group=group, target=target, name=name)
+        self.api = Clips()
         self.max_size = config.detector.clips_max_size * 1024 * 1024
-        self.clips_directory = "{}/clips".format(config.storage_path)
 
 
     def run(self):
@@ -40,7 +41,7 @@ class Cleanup(Thread):
     def remove_oldest(self):
         total_size = 0
 
-        for root, dirs, files in os.walk(self.clips_directory, topdown=False):
+        for root, dirs, files in os.walk(self.api.storage_path, topdown=False):
             for filename in files:
                 if not self.regex.match(filename):
                     continue
@@ -55,7 +56,7 @@ class Cleanup(Thread):
 
     def calculate_total_space(self):
         self.current_size = 0
-        for root, dirs, files in os.walk(self.clips_directory, topdown=False):
+        for root, dirs, files in os.walk(self.api.storage_path, topdown=False):
             for filename in files:
                 filepath = join(root, filename)
                 self.current_size += getsize(filepath)

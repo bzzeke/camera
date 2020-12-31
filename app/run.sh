@@ -3,10 +3,9 @@
 source /opt/intel/openvino/bin/setupvars.sh
 export OPENCV_LOG_LEVEL=SILENT
 
-MODELS_ROOT="/srv/models"
+MODELS_ROOT="/app/storage/models"
 FILENAME="${MODEL_PACKAGE##*/}"
 DIRNAME=${FILENAME%.*}
-
 
 if [ ! -d "$MODELS_ROOT/$DIRNAME" ]; then
     mkdir -p $MODELS_ROOT/$DIRNAME
@@ -16,5 +15,5 @@ if [ ! -d "$MODELS_ROOT/$DIRNAME" ]; then
     rm -f model.tgz
 fi
 
-cd /app
+cd /app/app
 python3 -u main.py

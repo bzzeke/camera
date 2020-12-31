@@ -97,7 +97,7 @@ class Camera():
             "stream_url": self.client.stream_url,
             "substream_url": self.client.substream_url,
             "ptz": self.client.ptz,
-            "snapshot_url": "http://{}:{}/camera/{}/snapshot".format(os.environ["API_SERVER_HOST"], os.environ["API_SERVER_PORT"], self.id)
+            "snapshot_url": "http://{}:{}/api/camera/{}/snapshot".format(os.environ["API_SERVER_HOST"], os.environ["API_SERVER_PORT"], self.id)
         }
 
     def set_options(self, options):

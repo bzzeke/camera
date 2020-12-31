@@ -8,7 +8,7 @@ from camera.camera import Camera
 # from camera.object_detector import ObjectDetector
 from homekit import HomekitCamera, HomekitWorker
 from adapters.pyhap import HomekitDriver
-from models.config import config, CameraModel
+from models.config import config, storage_path, CameraModel
 from util import log
 
 class CameraManager:
@@ -28,7 +28,7 @@ class CameraManager:
 
 
     def start_homekit(self):
-        self.homekit_driver = HomekitDriver(address=os.environ["API_SERVER_HOST"], port=51826, persist_file="{}/data/bridge.state".format(config.storage_path))
+        self.homekit_driver = HomekitDriver(address=os.environ["API_SERVER_HOST"], port=51826, persist_file="{}/data/bridge.state".format(storage_path))
         self.homekit_bridge = Bridge(self.homekit_driver, 'Camera bridge')
         self.homekit_driver.add_accessory(accessory=self.homekit_bridge)
         self.homekit_worker = HomekitWorker(driver=self.homekit_driver)

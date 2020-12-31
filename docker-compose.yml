@@ -8,14 +8,10 @@ services:
         build:
             context: .
             dockerfile: Dockerfile.openvino
-            args:
-                - STORAGE_UID=${STORAGE_UID}
-                - STORAGE_GID=${STORAGE_GID}
-                - STORAGE_USER=${STORAGE_USER}
 
         network_mode: host
         privileged: true
         volumes:
-            - ./app:/app
+            - ./app/storage:/app/storage
         env_file: .env
         restart: always
