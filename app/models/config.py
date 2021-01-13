@@ -28,12 +28,12 @@ class CapturerType(str, Enum):
     gstreamer = 'gstreamer'
 
 class HardwareType(str, Enum):
-    cpu = 'cpu'
-    gpu = 'gpu'
+    CPU = 'CPU'
+    GPU = 'GPU'
 
 class CapturerModel(BaseModel):
     type: CapturerType = CapturerType.ffmpeg
-    hardware: HardwareType = HardwareType.cpu
+    hardware: HardwareType = HardwareType.CPU
 
 class NotificationsModel(BaseModel):
     enabled = False
@@ -42,7 +42,7 @@ class NotificationsModel(BaseModel):
 class DetectorModel(BaseModel):
     model_path: str = "{}/models/yolo-v2-tf.xml".format(storage_path)
     clips_max_size = 500
-    inference_device: HardwareType = HardwareType.cpu
+    inference_device: HardwareType = HardwareType.CPU
 
 class UserModel(BaseModel):
     username: str = ""

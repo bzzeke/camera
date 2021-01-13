@@ -48,8 +48,8 @@ def settings(request: Request):
                 "type": "select",
                 "value": config.capturer.hardware,
                 "items": [
-                    {"text": "CPU", "value": "cpu"},
-                    {"text": "GPU", "value": "gpu"}
+                    {"text": "CPU", "value": "CPU"},
+                    {"text": "GPU", "value": "GPU"}
                 ]
             },
             {
@@ -90,8 +90,8 @@ def settings(request: Request):
                 "type": "select",
                 "value": config.detector.inference_device,
                 "items": [
-                    {"text": "CPU", "value": "cpu"},
-                    {"text": "GPU", "value": "gpu"}
+                    {"text": "CPU", "value": "CPU"},
+                    {"text": "GPU", "value": "GPU"}
                 ]
             }
         ]
