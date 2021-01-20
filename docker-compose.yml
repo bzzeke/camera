@@ -12,6 +12,9 @@ services:
         network_mode: host
         privileged: true
         volumes:
-            - ./app/storage:/app/storage
+            - ./storage:/app/storage
+            - ./app:/app/app
+            - ./web/dist:/app/web/dist
+            - ./ai:/app/ai
         env_file: .env
         restart: always
