@@ -1,0 +1,20 @@
+version: '3'
+networks:
+    service:
+    secured:
+
+services:
+    camera:
+        build:
+            context: .
+            dockerfile: Dockerfile.openvino
+
+        network_mode: host
+        privileged: true
+        volumes:
+            - ./storage:/app/storage
+            - ./app:/app/app
+            - ./web/dist:/app/web/dist
+            - ./ai:/app/ai
+        env_file: .env
+        restart: always

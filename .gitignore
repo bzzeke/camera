@@ -1,6 +1,8 @@
 ai/*
 .env
 *.pyc
-app/detectors/models/*
 .DS_Store
 clips/*
+models/*
+app/test*
+storage/*

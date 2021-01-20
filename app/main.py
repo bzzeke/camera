@@ -1,85 +1,49 @@
-import os
 import time
 import sys
 import threading
-from threading import Thread, RLock
-import queue
+import os
 
-from streamer import Streamer
-from api import ApiServer
-from phase1_detector_simple import Phase1Detector
-from phase2_detector_simple import Phase2Detector
+from util import import_env, log
+import_env()
+
+from api.server import ApiServer
 from cleanup import Cleanup
-
-def import_env():
-    filepath = os.path.dirname(os.path.realpath(__file__)) + '/../.env'
-    if not os.path.isfile(filepath):
-        return
-
-    with open(filepath) as fp:
-        for cnt, line in enumerate(fp):
-            parts = line.split('=', 1)
-            if len(parts) == 2:
-                os.environ[parts[0].strip()] = parts[1].strip()
-
-class State():
-    cameras = {}
-    lock = RLock()
-    threads = []
-    q = queue.Queue()
-
-    def set_camera(self, camera):
-        self.lock.acquire()
-        try:
-            self.cameras[camera["name"]] = camera
-
-            phase1 = Phase1Detector(camera=camera, queue=self.q)
-            phase1.start()
-            self.threads.append(phase1)
-
-        finally:
-            self.lock.release()
-
-
+from camera.manager import CameraManager
+from notifier import Notifier
 
 if __name__ == "__main__":
-    import_env()
-
-    state = State()
-
-    object_detector = Phase2Detector(queue=state.q)
-    object_detector.start()
-
-    cleanup = Cleanup()
-    cleanup.start()
-
-    streamer = Streamer(state=state)
-    streamer.start()
-
-    api_server = ApiServer(state=state)
-    api_server.start()
-
-    total_threads = threading.active_count()
-
     try:
+        notifier = Notifier()
+        notifier.start()
+
+        camera_manager = CameraManager(notifier=notifier)
+        camera_manager.start()
+
+        cleanup = Cleanup()
+        cleanup.start()
+
+        api_server = ApiServer(camera_manager=camera_manager)
+        api_server.start()
+
+        total_threads = threading.active_count()
+
         while True:
             time.sleep(1)
             if threading.active_count() < total_threads:
-                print("Some thread is dead")
-                sys.exit(1)
-    except KeyboardInterrupt:
+                log("[main] Some thread is dead")
+                raise KeyboardInterrupt
 
-        print("Stopping all")
-        cleanup.stop = True
-        streamer.stop = True
-        object_detector.stop = True
-        api_server.stop()
+    except (KeyboardInterrupt, Exception) as e:
+        log("[main] Caught exception: {}".format(str(e)))
+        log("[main] Stopping all")
+        if "notifier" in locals():
+            notifier.stop()
 
-        for thread in state.threads:
-            thread.stop = True
-            thread.join()
+        if "cleanup" in locals():
+            cleanup.stop()
 
-        cleanup.join()
-        streamer.join()
-        object_detector.join()
-        api_server.join()
+        if "api_server" in locals():
+            api_server.stop()
+
+        if "camera_manager" in locals():
+            camera_manager.stop()

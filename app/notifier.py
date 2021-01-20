@@ -1,30 +1,67 @@
 import smtplib
-from email.message import EmailMessage
 import imghdr
 import os
+import requests
+import base64
+import queue
+import time
 
-class Notifier():
+from threading import Thread
+
+from util import log
+from models.config import config
+
+class Notifier(Thread):
+    queue = queue.Queue()
+    stop_flag = False
+
     def notify(self, message, attachments = []):
 
-        msg = EmailMessage()
-        msg.set_content(message)
-        msg["Subject"] = "Alert"
-        msg["From"] = os.environ["FROM_EMAIL"]
-        msg["To"] = os.environ["NOTIFY_EMAIL"]
+        if not config.notifications.enabled:
+            return
 
-        if len(attachments) > 0:
-            for filepath in attachments:
-                with open(filepath, 'rb') as fp:
-                    img_data = fp.read()
+        self.queue.put((message, attachments))
 
-                msg.add_attachment(img_data, maintype='image', subtype=imghdr.what(None, img_data))
+    def run(self):
+        while not self.stop_flag:
+            try:
+                (message, attachments) = self.queue.get(block=False)
+                self.send(message, attachments)
+            except queue.Empty:
+                time.sleep(0.1)
+                continue
 
-        self.send(msg)
+    def send(self, message, attachments):
 
-    def send(self, message):
         try:
-            s = smtplib.SMTP(host=os.environ["NOTIFYING_MAIL_SERVER"], port=25, timeout=5)
-            s.send_message(message)
-            s.quit()
+            payload = {
+                "text": message,
+                "attachments": [],
+                "meta": {
+                    "surveillance": []
+                }
+            }
+
+            if len(attachments) > 0:
+                for filepath, meta in attachments:
+                    with open(filepath, "rb") as fp:
+                        img_data = fp.read()
+
+                    payload["attachments"].append(base64.b64encode(img_data).decode())
+                    payload["meta"]["surveillance"].append(meta)
+
+            r = requests.post(config.notifications.url, json=payload)
+
+            if r.status_code != 200:
+                try:
+                    error = r.json()
+                    log("[notifier] Failed to send message {}: {}".format(message, error["error"]))
+                except Exception as e:
+                    log("[notifier] Failed to send message {}: {}".format(message, r.status_code))
+
         except Exception as e:
-            print("[notifier] Failed to send email: %s" % str(e))
+            log("[notifier] Failed to send message {}: {}".format(message, str(e)))
+
+    def stop(self):
+        self.stop_flag = True
+        self.join()

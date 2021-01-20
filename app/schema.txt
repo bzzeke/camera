@@ -1,0 +1,19 @@
+
+HomeKit
+  |___ AccessoryDriver
+
+Camera
+  |__ Streamer
+  |       |___ StreamWatcher
+  |__ MotionDetector
+           |__ ClipWriter
+           |__ ObjectProcessor
+
+Notifier
+Cleanup
+
+ApiServer
+   |____ HttpServer
+
+
+ObjectDetector

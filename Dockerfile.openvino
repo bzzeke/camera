@@ -1,0 +1,22 @@
+FROM openvino/ubuntu18_runtime:latest
+
+USER root
+
+ENV DEBIAN_FRONTEND "noninteractive"
+
+RUN apt update
+RUN apt install -y python3-dev libavahi-compat-libdnssd-dev
+RUN	pip3 install --no-cache-dir numpy pyzmq	pickledb shapely requests
+RUN	pip3 install --no-cache-dir aiofiles wsdiscovery uvicorn fastapi aiofiles pickledb HAP-python[QRCode]
+
+RUN mkdir /app
+# ADD app /app/app
+# ADD web/dist /app/web/dist
+
+WORKDIR /app/app
+
+VOLUME /app/app
+VOLUME /app/web/dist
+VOLUME /app/storage
+
+CMD ["/app/app/run.sh"]
