@@ -130,7 +130,6 @@ export default {
         },
         save() {
             apiClient.addCamera(this.camera).then(response => {
-                this.hosts = this.hosts.filter(host => host != this.camera.host);
                 this.$toast.success("Camera was successfully added");
                 this.dialog = false;
                 this.addCamera(response.results);
