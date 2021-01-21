@@ -77,7 +77,7 @@ class Camera():
         self.streamer = CameraStream(camera=self)
         self.streamer.start()
 
-    def start_homekit(self, homekit_bridge):
+    def add_to_homekit(self, homekit_bridge):
         accessory = HomekitCamera(self, homekit_bridge.driver, self.name)
         homekit_bridge.add_accessory(accessory)
 
