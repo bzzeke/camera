@@ -111,6 +111,9 @@ class Camera():
     def make_snapshot(self):
         return self.client.make_snapshot()
 
+    def move(self, direction):
+        return self.client.move(direction)
+
 
 class BaseCamera():
     id = ""
