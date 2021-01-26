@@ -4,6 +4,9 @@ import asyncio
 import threading
 import queue
 import json
+import itertools
+import warnings
+import logging
 
 from pyhap.hap_server import HAPServerHandler
 from pyhap.accessory_driver import AccessoryDriver
@@ -14,6 +17,8 @@ from pyhap.loader import Loader
 from pyhap.state import State
 from pyhap.hap_server import HAPServer
 from pyhap.const import CATEGORY_BRIDGE
+
+logger = logging.getLogger("pyhap")
 
 class HomekitDriver(AccessoryDriver):
 
@@ -75,6 +80,31 @@ class HomekitDriver(AccessoryDriver):
         network_tuple = (listen_address, self.state.port)
         self.http_server = HAPServer(network_tuple, self, handler_type=ServerHandler)
 
+    def start(self):
+        """Start the event loop and call `start_service`.
+        Pyhap will be stopped gracefully on a KeyBoardInterrupt.
+        """
+        try:
+            logger.info('Starting the event loop')
+            if threading.current_thread() is threading.main_thread():
+                logger.debug('Setting child watcher')
+                watcher = ThreadedChildWatcher()
+                watcher.attach_loop(self.loop)
+                asyncio.set_child_watcher(watcher)
+            else:
+                logger.debug('Not setting a child watcher. Set one if '
+                             'subprocesses will be started outside the main thread.')
+            self.add_job(self.start_service)
+            self.loop.run_forever()
+        except KeyboardInterrupt:
+            logger.debug('Got a KeyboardInterrupt, stopping driver')
+            self.loop.call_soon_threadsafe(
+                self.loop.create_task, self.async_stop())
+            self.loop.run_forever()
+        finally:
+            self.loop.close()
+            logger.info('Closed the event loop')
+
 class ServerHandler(HAPServerHandler):
     def handle_resource(self):
         """Get a snapshot from the camera."""
@@ -98,3 +128,89 @@ class ServerHandler(HAPServerHandler):
         self.send_response(200)
         self.send_header('Content-Type', 'image/jpeg')
         self.end_response(image)
+
+
+class ThreadedChildWatcher(asyncio.AbstractChildWatcher):
+    """Threaded child watcher implementation.
+    The watcher uses a thread per process
+    for waiting for the process finish.
+    It doesn't require subscription on POSIX signal
+    but a thread creation is not free.
+    The watcher has O(1) complexity, its performance doesn't depend
+    on amount of spawn processes.
+    """
+
+    def __init__(self):
+        self._pid_counter = itertools.count(0)
+        self._threads = {}
+
+    def is_active(self):
+        return True
+
+    def close(self):
+        self._join_threads()
+
+    def _join_threads(self):
+        """Internal: Join all non-daemon threads"""
+        threads = [thread for thread in list(self._threads.values())
+                   if thread.is_alive() and not thread.daemon]
+        for thread in threads:
+            thread.join()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    def __del__(self, _warn=warnings.warn):
+        threads = [thread for thread in list(self._threads.values())
+                   if thread.is_alive()]
+        if threads:
+            _warn(f"{self.__class__} has registered but not finished child processes",
+                  ResourceWarning,
+                  source=self)
+
+    def add_child_handler(self, pid, callback, *args):
+        loop = events.get_running_loop()
+        thread = threading.Thread(target=self._do_waitpid,
+                                  name=f"waitpid-{next(self._pid_counter)}",
+                                  args=(loop, pid, callback, args),
+                                  daemon=True)
+        self._threads[pid] = thread
+        thread.start()
+
+    def remove_child_handler(self, pid):
+        # asyncio never calls remove_child_handler() !!!
+        # The method is no-op but is implemented because
+        # abstract base classe requires it
+        return True
+
+    def attach_loop(self, loop):
+        pass
+
+    def _do_waitpid(self, loop, expected_pid, callback, args):
+        assert expected_pid > 0
+
+        try:
+            pid, status = os.waitpid(expected_pid, 0)
+        except ChildProcessError:
+            # The child process is already reaped
+            # (may happen if waitpid() is called elsewhere).
+            pid = expected_pid
+            returncode = 255
+            logger.warning(
+                "Unknown child process pid %d, will report returncode 255",
+                pid)
+        else:
+            returncode = _compute_returncode(status)
+            if loop.get_debug():
+                logger.debug('process %s exited with returncode %s',
+                             expected_pid, returncode)
+
+        if loop.is_closed():
+            logger.warning("Loop %r that handles pid %r is closed", loop, pid)
+        else:
+            loop.call_soon_threadsafe(callback, pid, returncode, *args)
+
+        self._threads.pop(expected_pid)
