@@ -47,7 +47,7 @@ class HomekitCamera(camera.Camera):
         "start_stream_cmd":  (
         'ffmpeg -re -i {stream} '
         '-probesize 32 -analyzeduration 0 '
-        '-an' # disable audio
+        '-an ' # disable audio
         '-vcodec copy -r 10 '
         '-payload_type 99 -ssrc {v_ssrc} -f rtp '
         '-srtp_out_suite AES_CM_128_HMAC_SHA1_80 -srtp_out_params {v_srtp_key} '
