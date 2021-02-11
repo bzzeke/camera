@@ -43,7 +43,7 @@ class ClipWriter(Thread):
             if self.start_timestamp > 0 and out == None:
                 last_timestamp = self.start_timestamp
                 self.categories = []
-                file_path = self.api.path(self.camera.id, self.start_timestamp, "mp4")
+                file_path = self.api.path(self.camera.id, self.start_timestamp, self.api.video_format)
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
                 fourcc = cv2.VideoWriter_fourcc("a", "v", "c", "1")
@@ -66,7 +66,7 @@ class ClipWriter(Thread):
                 out.write(frame)
 
     def finish_clip(self, timestamp):
-        file_path = self.api.path(self.camera.id, timestamp, "jpeg")
+        file_path = self.api.path(self.camera.id, timestamp, self.api.image_format)
         if os.path.isfile(file_path):
             self.save_meta(self.categories, timestamp)
         else:
@@ -84,8 +84,10 @@ class ClipWriter(Thread):
 
         if len(objects) > 0:
             for obj in objects:
-                if obj["xmax"] > origin_im_size[1] or obj["ymax"] > origin_im_size[0] or obj["xmin"] < 0 or obj["ymin"] < 0:
-                    continue
+                obj["xmin"] = max(0, obj["xmin"])
+                obj["ymin"] = max(0, obj["ymin"])
+                obj["xmax"] = min(origin_im_size[1], obj["xmax"])
+                obj["ymax"] = min(origin_im_size[0], obj["ymax"])
 
                 cv2.rectangle(snapshot_frame, (obj["xmin"], obj["ymin"]), (obj["xmax"], obj["ymax"]), self.COLOR, 2)
 
@@ -99,7 +101,7 @@ class ClipWriter(Thread):
                 cv2.rectangle(snapshot_frame, box_coords[0], box_coords[1], self.COLOR, cv2.FILLED)
                 cv2.putText(snapshot_frame, label, (text_offset_x, text_offset_y), cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 0, 0), 1)
 
-        file_path = self.api.path(self.camera.id, timestamp, "jpeg")
+        file_path = self.api.path(self.camera.id, timestamp, self.api.image_format)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         cv2.imwrite(file_path, snapshot_frame)
         del snapshot_frame
