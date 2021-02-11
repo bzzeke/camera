@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@chenfengyuan/vue-qrcode": "^1.0.2",
-    "apexcharts": "^3.22.0",
+    "apexcharts": "^3.24.0",
     "axios": "^0.21.0",
     "core-js": "^3.6.5",
     "css-loader": "^4.3.0",
