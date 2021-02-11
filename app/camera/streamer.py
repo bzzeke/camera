@@ -50,12 +50,16 @@ class CameraStream(Thread):
                 continue
 
             if self.camera.meta["dtype"] == None:
+                fps = int(self.video.get(cv2.CAP_PROP_FPS))
+                if fps == 0:
+                    fps = 10 # fixme
+
                 self.camera.set_meta({
                     "dtype": str(frame.dtype),
                     "shape": frame.shape,
                     "width": int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH)),
                     "height": int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-                    "fps": int(self.video.get(cv2.CAP_PROP_FPS)),
+                    "fps": fps,
                 })
                 log("[streamer] [{}] Save meta information".format(self.camera.name))
 

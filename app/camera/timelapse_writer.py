@@ -58,7 +58,7 @@ class TimelapseWriter(Thread):
 
             frame_idx = 0
             if out_frame_counter == 0:
-                file_path = api.chunk_path(int(time.time()))
+                file_path = api.chunk_path(self.camera.id, int(time.time()))
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
                 self.out = cv2.VideoWriter(file_path, fourcc, self.FPS, (self.camera.meta["width"], self.camera.meta["height"]))
 

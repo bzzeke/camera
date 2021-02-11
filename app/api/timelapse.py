@@ -12,9 +12,9 @@ class Timelapse:
         chunk_date = dt.date.fromtimestamp(timestamp)
         return "{}/{}/{}/{}".format(self.storage_path, chunk_date.year, chunk_date.month, chunk_date.day)
 
-    def chunk_path(self, timestamp):
-        return "{}/{}.{}".format(self.path(timestamp), timestamp, self.video_format)
+    def chunk_path(self, camera_id, timestamp):
+        return "{}/{}/{}.{}".format(self.path(timestamp), camera_id, timestamp, self.video_format)
 
-    def list(self, timestamp):
-        chunks = sorted(glob.iglob("{}/*.{}".format(self.path(timestamp), self.video_format)))
+    def list(self, camera_id, timestamp):
+        chunks = sorted(glob.iglob("{}/{}/*.{}".format(self.path(timestamp), camera_id, self.video_format)))
         return list(map(lambda chunk: os.path.basename(chunk), chunks))
