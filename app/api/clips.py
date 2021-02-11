@@ -6,6 +6,8 @@ from models.config import config, storage_path
 
 class Clips:
     storage_path = "{}/clips".format(storage_path)
+    video_format = "mp4"
+    image_format = "jpeg"
 
     def get_clips(self, camera, category, date):
         filepath = self.db_path(date)
@@ -22,7 +24,7 @@ class Clips:
         return False
 
     def get_video(self, camera, timestamp):
-        filepath = self.path(camera, timestamp, "mp4")
+        filepath = self.path(camera, timestamp, self.video_format)
 
         if os.path.isfile(filepath):
             return filepath
@@ -30,7 +32,7 @@ class Clips:
         return False
 
     def get_thumbnail(self, camera, timestamp):
-        filepath = self.path(camera, timestamp, "jpeg")
+        filepath = self.path(camera, timestamp, self.image_format)
         if os.path.isfile(filepath):
             return filepath
 

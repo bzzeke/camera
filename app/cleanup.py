@@ -4,6 +4,7 @@ import time
 
 from threading import Thread
 from os.path import join, getsize
+from pathlib import Path
 
 from util import log
 from api.clips import Clips
@@ -15,8 +16,8 @@ class Cleanup(Thread):
     max_size = 0
     api = None
     period = 5 * 60 * 60 # seconds
+
     stop_flag = False
-    regex = re.compile("[0-9]+\\.(jpeg|mp4)")
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None):
         super(Cleanup, self).__init__(group=group, target=target, name=name)
@@ -41,18 +42,19 @@ class Cleanup(Thread):
     def remove_oldest(self):
         total_size = 0
 
-        for root, dirs, files in os.walk(self.api.storage_path, topdown=False):
-            for filename in files:
-                if not self.regex.match(filename):
-                    continue
-
-                filepath = join(root, filename)
-                total_size += getsize(filepath)
-                log("[cleanup] Removing file: {}".format(filepath))
-                os.remove(filepath)
+        paths = sorted(Path(self.api.storage_path).glob("*/*/*"), key=os.path.getmtime)
+        for path in paths:
+            for filename in sorted(path.glob("**/*.{}".format(self.api.video_format)), key=os.path.getmtime):
+                total_size += filename.stat().st_size
+                log("[cleanup] Removing file: {}".format(filename))
+                filename.unlink()
+                snapshot = filename.with_suffix(".{}".format(self.api.image_format))
+                if snapshot.is_file():
+                    total_size += snapshot.stat().st_size
+                    snapshot.unlink()
 
                 if self.current_size - total_size <= self.max_size:
-                    break
+                    return
 
     def calculate_total_space(self):
         self.current_size = 0
