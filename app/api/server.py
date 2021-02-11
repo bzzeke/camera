@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from api.auth import HTTPHeaderAuthentication
-from api.routes import auth, camera, clips, system
+from api.routes import auth, camera, clips, system, timelapse
 from util import log
 from adapters.fastapi import APIException
 
@@ -38,6 +38,8 @@ class ApiServer(Thread):
             app.include_router(clips.public_router, prefix="/api")
             app.include_router(auth.router, prefix="/api")
             app.include_router(system.router, prefix="/api")
+            app.include_router(timelapse.router, prefix="/api", dependencies=[protected])
+            app.include_router(timelapse.public_router, prefix="/api")
 
             app.mount("/", StaticFiles(directory="../web/dist", html=True), name="public")
 

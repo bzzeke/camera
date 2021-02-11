@@ -9,6 +9,7 @@ from threading import Thread
 
 from camera.onvif import Onvif
 from camera.motion_detector import MotionDetector
+from camera.timelapse_writer import TimelapseWriter
 from camera.streamer import CameraStream
 from homekit import HomekitCamera
 from util import log
@@ -20,6 +21,7 @@ class Camera():
     object_detector_queue = None
     streamer = None
     notifier = None
+    timelapse_writer = None
 
     client = None
     name = ""
@@ -61,6 +63,8 @@ class Camera():
         self.object_detector_queue = object_detector_queue
         self.start_streamer()
         self.restart_motion_detector()
+        self.timelapse_writer = TimelapseWriter(camera=self)
+        self.timelapse_writer.start()
 
     def restart_motion_detector(self):
         if not self.detection.enabled:
@@ -83,7 +87,7 @@ class Camera():
 
     def stop(self):
         self.streamer.stop()
-
+        self.timelapse_writer.stop()
         if self.motion_detector != None:
             self.motion_detector.stop()
 

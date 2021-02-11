@@ -17,7 +17,7 @@ from camera.object_processor import ObjectProcessor
 #
 
 class MotionDetector(Thread):
-    RATE = 10 # each N frame
+    RATE = 5 # each N frame, move to config?
 
     stop_flag = False
     camera = None

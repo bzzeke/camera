@@ -6,8 +6,9 @@ Camera
   |__ Streamer
   |       |___ StreamWatcher
   |__ MotionDetector
-           |__ ClipWriter
-           |__ ObjectProcessor
+  |        |__ ClipWriter
+  |        |__ ObjectProcessor
+  |__ TimelapseWriter
 
 Notifier
 Cleanup
