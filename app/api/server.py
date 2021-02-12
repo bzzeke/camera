@@ -33,13 +33,14 @@ class ApiServer(Thread):
 
             protected = Depends(HTTPHeaderAuthentication())
             app.include_router(camera.router, prefix="/api", dependencies=[protected])
-            app.include_router(camera.public_router, prefix="/api")
             app.include_router(clips.router, prefix="/api", dependencies=[protected])
-            app.include_router(clips.public_router, prefix="/api")
-            app.include_router(auth.router, prefix="/api")
-            app.include_router(system.router, prefix="/api")
+            app.include_router(system.router, prefix="/api", dependencies=[protected])
             app.include_router(timelapse.router, prefix="/api", dependencies=[protected])
+
+            app.include_router(camera.public_router, prefix="/api")
+            app.include_router(clips.public_router, prefix="/api")
             app.include_router(timelapse.public_router, prefix="/api")
+            app.include_router(auth.router, prefix="/api")
 
             app.mount("/", StaticFiles(directory="../web/dist", html=True), name="public")
 
