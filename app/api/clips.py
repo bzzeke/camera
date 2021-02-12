@@ -1,5 +1,6 @@
 import os
 import jdb
+import time
 import datetime as dt
 
 from models.config import config, storage_path
@@ -57,3 +58,13 @@ class Clips:
             )
 
         return url
+
+    def get_timezone(self):
+        utc_offset = int(time.localtime().tm_gmtoff / (60 * 60))
+
+        if utc_offset == 0:
+            return "UTC"
+        elif utc_offset > 0:
+            return "UTC+{}".format(utc_offset)
+        else:
+            return "UTC{}".format(utc_offset)

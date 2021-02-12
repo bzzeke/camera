@@ -39,7 +39,10 @@ def clips_list(request: Request, camera: str = "", category: str = "", date: str
 
     return {
         "success": True,
-        "results": results
+        "results": results,
+        "meta": {
+            "timezone": api.get_timezone()
+        }
     }
 
 @public_router.get("/clips/{id}/video/{timestamp}")
