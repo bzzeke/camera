@@ -1,6 +1,9 @@
 import os
 
+
+from uuid import UUID
 from pyhap import camera
+from pyhap import tlv
 from threading import Thread
 
 class HomekitCamera(camera.Camera):
@@ -72,6 +75,31 @@ class HomekitCamera(camera.Camera):
 
     def get_snapshot(self, image_size):
         return self.cameraObj.make_snapshot()
+
+    # remove when https://github.com/ikalchev/HAP-python/pull/358 will be merged
+    async def _stop_stream(self, objs):
+        """Stop the stream for the specified session.
+        Schedules ``self.stop_stream``.
+        :param objs: TLV-decoded SelectedRTPStreamConfiguration value.
+        :param objs: ``dict``
+        """
+        session_objs = tlv.decode(objs[camera.SELECTED_STREAM_CONFIGURATION_TYPES['SESSION']])
+        session_id = UUID(bytes=session_objs[camera.SETUP_TYPES['SESSION_ID']])
+        session_info = self.sessions.get(session_id)
+
+        if not session_info:
+            camera.logger.error(
+                'Requested to stop stream for session %s, but no '
+                'such session was found',
+                session_id
+            )
+            return
+
+        stream_idx = session_info['stream_idx']
+        await self.stop_stream(session_info)
+        del self.sessions[session_id]
+
+        self._streaming_status[stream_idx] = camera.STREAMING_STATUS['AVAILABLE']
 
 
 class HomekitWorker(Thread):
