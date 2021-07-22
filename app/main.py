@@ -2,6 +2,7 @@ import time
 import sys
 import threading
 import os
+import asyncio
 
 from util import import_env, log
 import_env()
@@ -13,6 +14,9 @@ from notifier import Notifier
 
 if __name__ == "__main__":
     try:
+        asyncio.get_event_loop()
+        asyncio.get_child_watcher()
+
         notifier = Notifier()
         notifier.start()
 
