@@ -26,7 +26,7 @@ def import_env():
 
 def resize_image(image, new_width):
 
-    nparr = np.fromstring(image, np.uint8)
+    nparr = np.frombuffer(image, np.uint8)
     frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
     (h, w) = frame.shape[:2]

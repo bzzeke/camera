@@ -8,7 +8,7 @@ from camera.camera import Camera
 from camera.object_detector import ObjectDetector
 from homekit import HomekitCamera, HomekitWorker
 from adapters.pyhap import HomekitDriver
-from models.config import config, storage_path, CameraModel
+from models.config import config, storage_path
 from util import log
 
 class CameraManager:
@@ -72,7 +72,9 @@ class CameraManager:
     def stop(self):
         if self.homekit_worker:
             self.homekit_worker.stop()
-        self.object_detector.stop()
+
+        if self.object_detector:
+            self.object_detector.stop()
 
         for camera in self.get_all():
             camera.stop()

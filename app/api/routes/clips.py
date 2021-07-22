@@ -29,9 +29,13 @@ def clips_list(request: Request, camera: str = "", category: str = "", date: str
     clips = api.get_clips(camera, category, timestamp)
     if clips:
         for clip in clips:
+            camera_data = request.app.camera_manager.get(camera)
             results.append({
                 "timestamp": clip["start_time"],
-                "camera": clip["camera"],
+                "camera": {
+                    "id": clip["camera"],
+                    "name": camera_data.name if camera_data else "[deleted]"
+                },
                 "thumbnail_url": api.generate_video_url(clip, "thumbnail"),
                 "video_url": api.generate_video_url(clip, "video"),
                 "objects": clip["objects"]
