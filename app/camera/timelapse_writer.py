@@ -73,7 +73,8 @@ class TimelapseWriter(Thread):
     def stop(self):
         self.stop_flag = True
         self.join()
-        self.out.release()
-        self.out = None
+        if self.out:
+            self.out.release()
+            self.out = None
 
 
