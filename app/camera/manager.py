@@ -26,15 +26,9 @@ class CameraManager:
         self.object_detector = ObjectDetector(object_detector_queue=self.object_detector_queue)
         self.object_detector.start()
 
-        self.start_homekit()
-
-
-    def start_homekit(self):
         self.homekit_driver = AccessoryDriver(address=os.environ["API_SERVER_HOST"], port=51826, persist_file="{}/data/bridge.state".format(storage_path))
-        self.homekit_bridge = Bridge(self.homekit_driver, 'Camera bridge')
+        self.homekit_bridge = Bridge(self.homekit_driver, 'CameraBridge')
         self.homekit_driver.add_accessory(accessory=self.homekit_bridge)
-        self.homekit_worker = HomekitWorker(driver=self.homekit_driver)
-        self.homekit_worker.start()
 
     def get(self, id):
         if id in self.cameras:
@@ -82,3 +76,7 @@ class CameraManager:
     def start(self):
         for camera in config.cameras.values():
             self.add(camera)
+
+        self.homekit_worker = HomekitWorker(driver=self.homekit_driver)
+        self.homekit_worker.start()
+

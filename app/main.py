@@ -14,8 +14,9 @@ from notifier import Notifier
 
 if __name__ == "__main__":
     try:
-        asyncio.get_event_loop()
-        asyncio.get_child_watcher()
+        # removed, because ffmpeg process became defunct
+        # asyncio.get_event_loop()
+        # asyncio.get_child_watcher()
 
         notifier = Notifier()
         notifier.start()

@@ -1,11 +1,15 @@
 import requests
 import os
 import uuid
+import zmq
+import numpy
+import cv2
 
 from urllib.parse import urlparse, urlunparse
 from xml.etree import ElementTree
 from requests.auth import HTTPDigestAuth, HTTPBasicAuth
 from threading import Thread
+
 
 from camera.onvif import Onvif
 from camera.motion_detector import MotionDetector
@@ -24,6 +28,7 @@ class Camera():
     timelapse_writer = None
 
     client = None
+    buggy_snapshot = False
     name = ""
     id = ""
     stream_url = ""
@@ -113,7 +118,33 @@ class Camera():
         self.meta = meta
 
     def make_snapshot(self):
-        return self.client.make_snapshot()
+        if self.buggy_snapshot:
+            return self.get_frame()
+
+        snapshot = self.client.make_snapshot()
+        if not snapshot:
+            self.buggy_snapshot = True
+            return self.get_frame()
+
+        return snapshot
+
+    def get_frame(self):
+        try:
+            ctx = zmq.Context()
+            s = ctx.socket(zmq.SUB)
+            s.connect("ipc:///tmp/streamer_{}".format(self.id))
+            s.setsockopt(zmq.SUBSCRIBE, b"")
+
+            msg = s.recv()
+            s.close()
+            A = numpy.frombuffer(msg, dtype=self.meta["dtype"])
+            frame = A.reshape(self.meta['shape'])
+            del A
+            ret, jpeg = cv2.imencode('.jpg', frame)
+            return jpeg.tobytes()
+
+        except Exception as e:
+            log("[camera][{}] Failed to get image from stream: {}".format(self.id, str(e)))
 
     def move(self, direction):
         return self.client.move(direction)
@@ -251,21 +282,25 @@ class OnvifCamera(BaseCamera):
         parts = urlparse(self.snapshot_url)
 
         auth_type = HTTPBasicAuth(parts.username, parts.password) if self.auth_type == "basic" else HTTPDigestAuth(parts.username, parts.password)
-        response = requests.get(self.snapshot_url, auth=auth_type)
 
-        if response.status_code != 200:
-            auth_type = HTTPBasicAuth(parts.username, parts.password) if self.auth_type != "basic" else HTTPDigestAuth(parts.username, parts.password)
+        try:
             response = requests.get(self.snapshot_url, auth=auth_type)
 
-        if response.status_code == 200:
-            self.auth_type = "basic" if isinstance(auth_type, HTTPBasicAuth) else "digest"
-            return response.content
+            if response.status_code != 200:
+                auth_type = HTTPBasicAuth(parts.username, parts.password) if self.auth_type != "basic" else HTTPDigestAuth(parts.username, parts.password)
+                response = requests.get(self.snapshot_url, auth=auth_type)
+
+            if response.status_code == 200:
+                self.auth_type = "basic" if isinstance(auth_type, HTTPBasicAuth) else "digest"
+                return response.content
+        except:
+            pass
 
         return b""
 
 class TestCamera(BaseCamera):
-    stream_url = "../ai/video/backyard.mp4"
-    substream_url = "../ai/video/backyard.mp4"
+    stream_url = "../ai/video/false1.mp4"
+    substream_url = "../ai/video/false1.mp4"
     snapshot_url = ""
     ptz = {
         "zoom": False,
