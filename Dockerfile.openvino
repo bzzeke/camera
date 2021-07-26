@@ -4,8 +4,8 @@ USER root
 
 ENV DEBIAN_FRONTEND "noninteractive"
 
-RUN apt update
-RUN apt install -y python3-dev libavahi-compat-libdnssd-dev ffmpeg
+RUN apt-get update
+RUN apt-get install -y python3-dev libavahi-compat-libdnssd-dev ffmpeg gcc
 RUN	pip3 install --no-cache-dir numpy pyzmq	pickledb shapely requests
 RUN	pip3 install --no-cache-dir aiofiles wsdiscovery uvicorn fastapi aiofiles pickledb HAP-python[QRCode]
 
