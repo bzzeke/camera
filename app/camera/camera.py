@@ -1,7 +1,6 @@
 import requests
 import os
 import uuid
-import zmq
 import numpy
 import cv2
 
@@ -16,6 +15,7 @@ from camera.motion_detector import MotionDetector
 from camera.timelapse_writer import TimelapseWriter
 from camera.streamer import CameraStream
 from homekit import HomekitCamera
+from broker import Publisher, Subscriber
 from util import log
 from models.config import config, CameraModel, CameraType
 
@@ -26,6 +26,7 @@ class Camera():
     streamer = None
     notifier = None
     timelapse_writer = None
+    publisher = None
 
     client = None
     buggy_snapshot = False
@@ -66,6 +67,7 @@ class Camera():
 
         self.notifier = notifier
         self.object_detector_queue = object_detector_queue
+        self.publisher = Publisher()
         self.start_streamer()
         self.restart_motion_detector()
         self.timelapse_writer = TimelapseWriter(camera=self)
@@ -129,22 +131,17 @@ class Camera():
         return snapshot
 
     def get_frame(self):
-        try:
-            ctx = zmq.Context()
-            s = ctx.socket(zmq.SUB)
-            s.connect("ipc:///tmp/streamer_{}".format(self.id))
-            s.setsockopt(zmq.SUBSCRIBE, b"")
 
-            msg = s.recv()
-            s.close()
-            A = numpy.frombuffer(msg, dtype=self.meta["dtype"])
-            frame = A.reshape(self.meta['shape'])
-            del A
-            ret, jpeg = cv2.imencode('.jpg', frame)
-            return jpeg.tobytes()
+        subscriber = Subscriber()
+        self.publisher.attach(subscriber)
+        frame = subscriber.sub(block=True)
+        self.publisher.detach(subscriber)
+        if not frame:
+            log("[camera][{}] Failed to get image from stream: failed to get frame".format(self.id))
 
-        except Exception as e:
-            log("[camera][{}] Failed to get image from stream: {}".format(self.id, str(e)))
+
+        ret, jpeg = cv2.imencode('.jpg', frame)
+        return jpeg.tobytes()
 
     def move(self, direction):
         return self.client.move(direction)

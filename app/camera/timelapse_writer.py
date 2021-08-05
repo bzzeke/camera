@@ -3,7 +3,6 @@ import time
 import queue
 import os
 import jdb
-import zmq
 import numpy as np
 import collections
 import datetime as dt
@@ -13,6 +12,7 @@ from threading import Thread
 from api.timelapse import Timelapse
 from models.config import storage_path
 from util import log
+from broker import Subscriber
 
 class TimelapseWriter(Thread):
 
@@ -32,27 +32,21 @@ class TimelapseWriter(Thread):
 
         log("[timelapse_writer] [{}] Starting timelapse writer".format(self.camera.name))
         api = Timelapse()
-        ctx = zmq.Context()
-        s = ctx.socket(zmq.SUB)
-        s.connect("ipc:///tmp/streamer_{}".format(self.camera.id))
-        s.setsockopt(zmq.SUBSCRIBE, b"")
-        s.setsockopt(zmq.RCVTIMEO, 2000)
         frame_idx = 0
 
         out_frame_counter = 0
         fourcc = cv2.VideoWriter_fourcc("a", "v", "c", "1")
 
+        subscriber = Subscriber()
+        self.camera.publisher.attach(subscriber)
+
         while not self.stop_flag:
-            try:
-                msg = s.recv()
-            except:
+
+            frame = subscriber.sub()
+            if not frame:
                 continue
 
-            A = np.frombuffer(msg, dtype=self.camera.meta["dtype"])
-            frame = A.reshape(self.camera.meta["shape"])
-            del A
             frame_idx += 1
-
             if frame_idx % self.camera.meta["fps"] != 0:
                 continue
 
@@ -69,6 +63,8 @@ class TimelapseWriter(Thread):
                 self.out.release()
                 self.out = None
                 out_frame_counter = 0
+
+        self.camera.publisher.detach(subscriber)
 
     def stop(self):
         self.stop_flag = True

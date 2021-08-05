@@ -1,4 +1,4 @@
-import zmq
+from app.broker import Subscriber
 import cv2
 import numpy as np
 import time
@@ -7,6 +7,7 @@ import queue
 from threading import Thread
 
 from util import log
+from broker import Subscriber
 from camera.clip_writer import ClipWriter
 from camera.object_processor import ObjectProcessor
 
@@ -45,22 +46,17 @@ class MotionDetector(Thread):
 
     def run(self):
         log("[motion_detector] [{}] Starting detector".format(self.camera.name))
-        ctx = zmq.Context()
-        s = ctx.socket(zmq.SUB)
-        s.connect("ipc:///tmp/streamer_{}".format(self.camera.id))
-        s.setsockopt(zmq.SUBSCRIBE, b"")
-        s.setsockopt(zmq.RCVTIMEO, 2000)
+
+        subscriber = Subscriber()
+        self.camera.publisher.attach(subscriber)
         frame_idx = 0
 
         while not self.stop_flag:
-            try:
-                msg = s.recv()
-            except:
+
+            frame = subscriber.sub()
+            if not frame:
                 continue
 
-            A = np.frombuffer(msg, dtype=self.camera.meta["dtype"])
-            frame = A.reshape(self.camera.meta["shape"])
-            del A
             frame_idx += 1
             self.writer_queue.put(frame)
 
@@ -68,7 +64,7 @@ class MotionDetector(Thread):
                 self.object_detector_queue.put((self.response_queue, frame, int(time.time())))
                 frame_idx = 0
 
-        s.close()
+        self.camera.publisher.detach(subscriber)
         self.object_processor.stop()
         self.clip_writer.stop()
 

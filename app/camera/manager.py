@@ -4,6 +4,7 @@ import queue
 from pyhap.accessory import Bridge
 from urllib.parse import urlparse
 from pyhap.accessory_driver import AccessoryDriver
+from threading import Timer
 
 from camera.camera import Camera
 from camera.object_detector import ObjectDetector
@@ -47,7 +48,13 @@ class CameraManager:
         if self.is_exist(model.manage_url):
             return False
 
-        camera = Camera(model, notifier=self.notifier, object_detector_queue=self.object_detector_queue)
+        try:
+            camera = Camera(model, notifier=self.notifier, object_detector_queue=self.object_detector_queue)
+        except:
+            t = Timer(20, self.add, model)
+            t.start()
+            return False
+
         camera.add_to_homekit(self.homekit_bridge)
 
         self.cameras[camera.id] = camera

@@ -1,7 +1,6 @@
 import socket, sys
 import time
 import cv2
-import zmq
 import json
 import os
 
@@ -29,9 +28,6 @@ class CameraStream(Thread):
 
         log("[streamer] [{}] Starting stream".format(self.camera.name))
 
-        ctx = zmq.Context()
-        s = ctx.socket(zmq.PUB)
-        s.bind("ipc:///tmp/streamer_{}".format(self.camera.id))
 
         stream_watcher = StreamWatcher(camera_stream=self)
         stream_watcher.start()
@@ -64,10 +60,10 @@ class CameraStream(Thread):
                 log("[streamer] [{}] Save meta information".format(self.camera.name))
 
             self.ts_prezmq = time.time()
-            s.send(frame)
+            self.camera.publisher.pub(frame)
             self.ts_postzmq = time.time()
             del frame
-        s.close()
+
         stream_watcher.stop()
 
     def get_capture(self, url):
