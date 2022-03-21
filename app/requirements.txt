@@ -1,11 +1,12 @@
-pyzmq
-shapely
 aiofiles
-wsdiscovery
-opencv
-uvicorn
 fastapi
-aiofiles
-pickledb
-#sudo apt-get install libavahi-compat-libdnssd-dev
-HAP-python[QRCode]
+HAP-python
+pickleDB
+pydantic
+PyQRCode
+pyzmq
+Shapely
+uvicorn
+WSDiscovery
+requests
+numpy

@@ -7,7 +7,7 @@ services:
     camera:
         build:
             context: .
-            dockerfile: Dockerfile.openvino
+            dockerfile: Dockerfile.tf
 
         network_mode: host
         privileged: true

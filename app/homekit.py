@@ -48,7 +48,8 @@ class HomekitCamera(camera.Camera):
         },
         "srtp": True,
         "start_stream_cmd":  (
-        'ffmpeg -re -i {stream} '
+        'ffmpeg -i {stream} '
+        '-rtsp_transport tcp '
         '-probesize 32 -analyzeduration 0 '
         '-an ' # disable audio
         '-vcodec copy -r 10 '
@@ -64,13 +65,13 @@ class HomekitCamera(camera.Camera):
 
         options = self.default_options.copy()
         options["address"] = os.environ["API_SERVER_HOST"]
+        # options["stream"] = self.cameraObj.stream_url
 
         super(HomekitCamera, self).__init__(options, *args, **kwargs)
 
-
     async def start_stream(self, session_info, stream_config):
 
-        stream_config["stream"] = self.cameraObj.stream_url if stream_config["height"] >= 720 else self.cameraObj.substream_url
+        stream_config["stream"] = self.cameraObj.stream_url
         return await super().start_stream(session_info, stream_config)
 
     def get_snapshot(self, image_size):
