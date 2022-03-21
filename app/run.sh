@@ -16,4 +16,5 @@ if [ ! -d "$MODELS_ROOT/$DIRNAME" ]; then
 fi
 
 cd /app/app
+pip install -r requirements.txt
 python3 -u main.py
