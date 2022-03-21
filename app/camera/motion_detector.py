@@ -1,4 +1,4 @@
-from app.broker import Subscriber
+from broker import Subscriber
 import cv2
 import numpy as np
 import time
@@ -54,7 +54,7 @@ class MotionDetector(Thread):
         while not self.stop_flag:
 
             frame = subscriber.sub()
-            if not frame:
+            if frame is None:
                 continue
 
             frame_idx += 1

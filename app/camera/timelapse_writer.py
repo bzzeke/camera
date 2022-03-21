@@ -42,7 +42,7 @@ class TimelapseWriter(Thread):
         while not self.stop_flag:
 
             frame = subscriber.sub()
-            if not frame:
+            if frame is None:
                 continue
 
             frame_idx += 1
