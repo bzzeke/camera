@@ -1,5 +1,6 @@
 import re
 import aiofiles
+from aiofiles import os as aos
 import stat
 import os
 import http
@@ -33,7 +34,7 @@ class MediaResponse(FileResponse):
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if self.stat_result is None:
             try:
-                stat_result = await aiofiles.os.stat(self.path)
+                stat_result = await aos.stat(self.path)
                 self.set_stat_headers(stat_result)
             except FileNotFoundError:
                 raise RuntimeError(f"File at path {self.path} does not exist.")
